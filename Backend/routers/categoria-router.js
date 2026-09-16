@@ -1,7 +1,8 @@
 import { Router } from "express";
-import {crear, listarCategorias, obtener, actualizar, desactivar} from "../controllers/categoria-controller.js";
+import {crear, listarCategorias, obtener, actualizar, desactivar,activar} from "../controllers/categoria-controller.js";
 import { verificarToken } from "../middlewares/auth-middleware.js";
 import { verificarRol } from "../middlewares/rol-middleware.js";
+
 
 const router = Router();
 
@@ -59,6 +60,15 @@ router.put(
     verificarToken,
     verificarRol("ADMIN"),
     desactivar
+);
+
+// Activar categoría
+
+router.put(
+    "/:id/activar",
+    verificarToken,
+    verificarRol("ADMIN"),
+    activar
 );
 
 export default router;

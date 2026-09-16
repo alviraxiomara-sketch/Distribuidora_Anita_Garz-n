@@ -1,6 +1,8 @@
+dotenv.config();
+import dotenv from "dotenv";
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { conectaDB, supabase } from "./config/supabase.js";
 import authRoutes from "./routers/auth-router.js";
 import userRoutes from "./routers/user-router.js";
@@ -15,7 +17,7 @@ import recuperarRoutes from "./routers/recuperar-router.js";
 import chatRoutes from "./routers/chatbox-router.js";
 
 // cargamos las variables
-dotenv.config();
+
 conectaDB();
 
 // creamos la aplicacion de express

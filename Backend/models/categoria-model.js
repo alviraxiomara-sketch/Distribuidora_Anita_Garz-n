@@ -108,6 +108,26 @@ export const desactivarCategoria = async (id_categoria) => {
 };
 
 // ==========================
+// ACTIVAR CATEGORÍA
+// ==========================
+
+export const activarCategoria = async (id_categoria) => {
+
+    const { data, error } =
+        await supabase
+            .from("categorias")
+            .update({
+                activo: true,
+                updated_at: new Date()
+            })
+            .eq("id_categoria", id_categoria)
+            .select()
+            .single();
+
+    return { data, error };
+};
+
+// ==========================
 // OBTENER CATEGORÍA POR NOMBRE
 // ==========================
 

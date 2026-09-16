@@ -1,5 +1,6 @@
-import {crearCategoria, obtenerCategorias, obtenerCategoriaPorId, obtenerCategoriaPorNombre, actualizarCategoria, desactivarCategoria} from "../models/categoria-model.js";
-
+import {crearCategoria, obtenerCategorias,
+    obtenerCategoriaPorId, obtenerCategoriaPorNombre,
+    actualizarCategoria, desactivarCategoria, activarCategoria} from "../models/categoria-model.js";
 
 // ==========================
 // CREAR CATEGORÍA
@@ -50,6 +51,39 @@ export const crear = async (req, res) => {
 
         return res.status(201).json({
             mensaje: "Categoría creada correctamente",
+            categoria: data
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            error: error.message
+        });
+
+    }
+};
+
+// ==========================
+// ACTIVAR CATEGORÍA
+// ==========================
+
+export const activar = async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        const { data, error } =
+            await activarCategoria(id);
+
+        if (error) {
+            return res.status(500).json({
+                error: error.message
+            });
+        }
+
+        return res.status(200).json({
+            mensaje: "Categoría activada correctamente",
             categoria: data
         });
 
