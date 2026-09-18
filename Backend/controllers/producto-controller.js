@@ -1,4 +1,4 @@
-import {crearProducto, obtenerProductos, obtenerProductoPorId, obtenerProductosPorCategoria, buscarProductosPorNombre, actualizarProducto, desactivarProducto} from "../models/producto-model.js";
+import {crearProducto, obtenerProductos, obtenerProductoPorId, obtenerProductosPorCategoria, buscarProductosPorNombre, actualizarProducto, desactivarProducto, activarProducto} from "../models/producto-model.js";
 
 // ==========================
 // CREAR PRODUCTO
@@ -428,6 +428,44 @@ export const desactivar = async (req, res) => {
 
         });
 
+
+    } catch (error) {
+
+        return res.status(500).json({
+            error: error.message
+        });
+
+    }
+};
+
+// ==========================
+// ACTIVAR PRODUCTO
+// ==========================
+
+export const activar = async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        const { data, error } =
+            await activarProducto(id);
+
+        if (error) {
+
+            return res.status(500).json({
+                error: error.message
+            });
+
+        }
+
+        return res.status(200).json({
+
+            mensaje: "Producto activado correctamente",
+
+            producto: data
+
+        });
 
     } catch (error) {
 

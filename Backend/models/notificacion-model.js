@@ -94,3 +94,26 @@ export const marcarLeida = async (
     return { data, error };
 
 };
+
+// ==========================
+// ELIMINAR NOTIFICACIÓN
+// ==========================
+
+export const eliminarNotificacion = async (
+    id_notificacion
+) => {
+
+    const { data, error } =
+        await supabase
+            .from("notificaciones")
+            .delete()
+            .eq(
+                "id_notificacion",
+                id_notificacion
+            )
+            .select()
+            .single();
+
+    return { data, error };
+
+};

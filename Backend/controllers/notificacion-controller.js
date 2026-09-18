@@ -1,4 +1,4 @@
-import {obtenerNotificacionesUsuario, obtenerNotificacionPorId, marcarLeida} from "../models/notificacion-model.js";
+import {obtenerNotificacionesUsuario, obtenerNotificacionPorId, marcarLeida, eliminarNotificacion} from "../models/notificacion-model.js";
 
 
 // ==========================
@@ -111,6 +111,93 @@ async (req, res) => {
 
             mensaje:
             "Notificación marcada como leída",
+
+            notificacion: data
+
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            error: error.message
+        });
+
+    }
+
+};
+
+// ==========================
+// ELIMINAR NOTIFICACIÓN
+// ==========================
+
+export const eliminar =
+async (req, res) => {
+
+    try {
+
+        const { id } =
+            req.params;
+
+        const {
+            data: notificacion,
+            error
+        } =
+        await obtenerNotificacionPorId(
+            id
+        );
+
+        if (error) {
+
+            return res.status(500).json({
+                error: error.message
+            });
+
+        }
+
+        if (!notificacion) {
+
+            return res.status(404).json({
+                error:
+                "Notificación no encontrada"
+            });
+
+        }
+
+        if (
+            Number(
+                notificacion.id_usuario
+            )
+            !==
+            Number(
+                req.usuario.id_usuario
+            )
+        ) {
+
+            return res.status(403).json({
+                error:
+                "No tiene permiso"
+            });
+
+        }
+
+        const {
+            data,
+            error: errorDelete
+        } = await eliminarNotificacion(id);
+
+        if (errorDelete) {
+
+            return res.status(500).json({
+                error:
+                errorDelete.message
+            });
+
+        }
+
+        return res.status(200).json({
+
+            mensaje:
+            "Notificación eliminada correctamente",
 
             notificacion: data
 

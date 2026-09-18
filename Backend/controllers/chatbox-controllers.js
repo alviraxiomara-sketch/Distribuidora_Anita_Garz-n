@@ -121,3 +121,32 @@ export const obtenerHistorialDistribuidora = async (req, res) => {
     return res.status(500).json({ message: "Error interno", error: error.message });
   }
 };
+
+// Endpoint para eliminar el historial de una sesión de chat
+export const eliminarHistorialDistribuidora = async (req, res) => {
+  try {
+    const { sesionId } = req.params;
+
+    const { data, error } = await supabase
+      .from("mensajes_chat")
+      .delete()
+      .eq("sesion_id", sesionId)
+      .select();
+
+    if (error) {
+      return res.status(500).json({ message: "Error al eliminar historial", error: error.message });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ message: "No se encontró historial para esa sesión" });
+    }
+
+    return res.status(200).json({
+      mensaje: "Historial eliminado correctamente",
+      mensajesEliminados: data.length
+    });
+
+  } catch (error) {
+    return res.status(500).json({ message: "Error interno", error: error.message });
+  }
+};

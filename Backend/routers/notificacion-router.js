@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {listarMisNotificaciones, marcarComoLeida} from "../controllers/notificacion-controller.js";
+import {listarMisNotificaciones, marcarComoLeida, eliminar} from "../controllers/notificacion-controller.js";
 import {verificarToken} from "../middlewares/auth-middleware.js";
 
 const router = Router();
@@ -26,4 +26,13 @@ router.put(
     marcarComoLeida
 );
 
+// ==========================
+// ELIMINAR NOTIFICACIÓN
+// ==========================
+
+router.delete(
+    "/:id/eliminar",
+    verificarToken,
+    eliminar
+);
 export default router;
