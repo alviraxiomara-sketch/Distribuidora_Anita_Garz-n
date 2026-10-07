@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/login_screen.dart';
+import 'package:frontend/screens/profile_screen.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
 
 class CategoriaItem {
@@ -37,9 +39,36 @@ class HomeScreen extends StatelessWidget {
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none, color: Colors.white, size: 22)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 22)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 24)),
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LoginScreen(),
+                ),
+              );
+            }, 
+            icon: const Icon(Icons.login_outlined, color: Colors.white, size: 22),
+          ),
+          IconButton(
+            onPressed: () {}, 
+            icon: const Icon(Icons.notifications_none, color: Colors.white, size: 22),
+          ),
+          IconButton(
+            onPressed: () {}, 
+            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 22),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
+                ),
+              );
+            }, 
+            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 24),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -114,11 +143,11 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-        floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton(
         heroTag: 'fab_chat_home',
         backgroundColor: const Color.fromARGB(255, 37, 168, 255),
         elevation: 6,
-        shape: const CircleBorder(), // <-- Esta línea quita los bordes cuadrados y lo hace completamente redondo
+        shape: const CircleBorder(),
         onPressed: () => _abrirChatDistribuidora(context),
         child: ClipOval(
           child: Image.asset(

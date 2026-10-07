@@ -1,5 +1,10 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:image_picker/image_picker.dart' as img_picker;
+import 'package:frontend/screens/login_screen.dart';
+import 'package:frontend/widgets/auth_screens.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -9,134 +14,139 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nombreCtrl = TextEditingController();
-  final _correoCtrl = TextEditingController();
-  final _direccionCtrl = TextEditingController();
-  final _telefonoCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  final _confirmarPassCtrl = TextEditingController();
+  final _nombreController = TextEditingController();
+  final _correoController = TextEditingController();
+  final _direccionController = TextEditingController();
+  final _telefonoController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
-  bool _ocultarPass = true;
-  bool _ocultarConfirmar = true;
+  bool _ocultarPassword = true;
+  bool _ocultarConfirmPassword = true;
+
+  final img_picker.ImagePicker _picker = img_picker.ImagePicker();
+  img_picker.XFile? _foto;
 
   @override
   void dispose() {
-    _nombreCtrl.dispose();
-    _correoCtrl.dispose();
-    _direccionCtrl.dispose();
-    _telefonoCtrl.dispose();
-    _passCtrl.dispose();
-    _confirmarPassCtrl.dispose();
+    _nombreController.dispose();
+    _correoController.dispose();
+    _direccionController.dispose();
+    _telefonoController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _crearCuenta() {
-    // TODO: conectar con el endpoint de registro (auth) del backend.
+  Future<void> _elegirFoto() async {
+    try {
+      final imagen = await _picker.pickImage(
+        source: img_picker.ImageSource.gallery,
+        maxWidth: 800,
+        imageQuality: 85,
+      );
+      if (imagen != null) setState(() => _foto = imagen);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir la galería')),
+      );
+    }
+  }
+
+  ImageProvider? get _fotoProvider {
+    if (_foto == null) return null;
+    return kIsWeb
+        ? NetworkImage(_foto!.path)
+        : FileImage(File(_foto!.path)) as ImageProvider;
+  }
+
+  void _irAIniciaSesion() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kFondoOscuro,
+      backgroundColor: const Color(0xFF031A2E),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.camera_alt_outlined, color: kFondoOscuro),
+                GestureDetector(
+                  onTap: _elegirFoto,
+                  child: Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(color: const Color(0xFF00A8FF), width: 3),
+                      image: _fotoProvider == null
+                          ? null
+                          : DecorationImage(image: _fotoProvider!, fit: BoxFit.cover),
+                    ),
+                    child: _fotoProvider == null
+                        ? const Icon(Icons.photo_camera, size: 45, color: Colors.black)
+                        : null,
+                  ),
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: tarjetaDecoration(),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Registrarse',
-                        style: TextStyle(
-                          color: kTextoClaro,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _nombreCtrl,
-                        decoration: campoDecoration('Nombre'),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _correoCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: campoDecoration('Correo'),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _direccionCtrl,
-                        decoration: campoDecoration('Dirección de residencia'),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _telefonoCtrl,
-                        keyboardType: TextInputType.phone,
-                        decoration: campoDecoration('Teléfono'),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _passCtrl,
-                        obscureText: _ocultarPass,
-                        decoration: campoDecoration(
-                          'Contraseña',
-                          suffixIcon: IconButton(
-                            icon: Icon(_ocultarPass
-                                ? Icons.visibility_off
-                                : Icons.visibility),
-                            onPressed: () =>
-                                setState(() => _ocultarPass = !_ocultarPass),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF063B5D),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF00A8FF), width: 2),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Registrarse',
+                          style: TextStyle(
+                            fontFamily: 'Georgia',
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _confirmarPassCtrl,
-                        obscureText: _ocultarConfirmar,
-                        decoration: campoDecoration(
-                          'Confirmar contraseña',
-                          suffixIcon: IconButton(
-                            icon: Icon(_ocultarConfirmar
-                                ? Icons.visibility_off
-                                : Icons.visibility),
-                            onPressed: () => setState(
-                                () => _ocultarConfirmar = !_ocultarConfirmar),
-                          ),
+                        const SizedBox(height: 14),
+                        AuthTextField(hint: 'Nombre', controller: _nombreController),
+                        AuthTextField(hint: 'Correo', controller: _correoController),
+                        AuthTextField(hint: 'Dirección de residencia', controller: _direccionController),
+                        AuthTextField(hint: 'Telefono', controller: _telefonoController),
+                        AuthTextField(
+                          hint: 'Contraseña',
+                          controller: _passwordController,
+                          isPassword: true,
+                          obscureText: _ocultarPassword,
+                          onToggleVisibility: () => setState(() => _ocultarPassword = !_ocultarPassword),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: botonPrincipalStyle(),
-                        onPressed: _crearCuenta,
-                        child: const Text('Crear Cuenta'),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text('¿Ya tienes una cuenta?',
-                          style: TextStyle(color: kTextoClaro)),
-                      const SizedBox(height: 6),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: kAzulBorde),
-                          minimumSize: const Size(double.infinity, 38),
+                        AuthTextField(
+                          hint: 'Confirmar contraseña',
+                          controller: _confirmPasswordController,
+                          isPassword: true,
+                          obscureText: _ocultarConfirmPassword,
+                          onToggleVisibility: () => setState(() => _ocultarConfirmPassword = !_ocultarConfirmPassword),
                         ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Inicia sesión'),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        PrimaryCustomButton(text: 'Crear Cuenta', onPressed: _irAIniciaSesion),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '¿Ya tienes una cuenta?',
+                          style: TextStyle(fontFamily: 'Georgia', color: Colors.white, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        PrimaryCustomButton(text: 'inicia sesion', onPressed: _irAIniciaSesion),
+                      ],
+                    ),
                   ),
                 ),
               ],

@@ -1,161 +1,126 @@
 import 'package:flutter/material.dart';
-import 'core.dart';
 
-Widget _logo({double r = 34}) => CircleAvatar(
-    radius: r, backgroundColor: Colors.white, child: Icon(Icons.local_bar, size: r, color: kBar));
+// Campo de texto personalizado con soporte para ocultar/mostrar contraseña
+class AuthTextField extends StatelessWidget {
+  final String hint;
+  final TextEditingController controller;
+  final bool isPassword;
+  final bool obscureText;
+  final VoidCallback? onToggleVisibility;
 
-Widget _cameraCircle({double r = 34}) => CircleAvatar(
-    radius: r, backgroundColor: Colors.white, child: Icon(Icons.photo_camera, size: r, color: Colors.black));
+  const AuthTextField({
+    super.key,
+    required this.hint,
+    required this.controller,
+    this.isPassword = false,
+    this.obscureText = false,
+    this.onToggleVisibility,
+  });
 
-/// Inicio de sesión
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(children: [
-              const SizedBox(height: 24),
-              _logo(),
-              BorderPanel(title: 'Iniciar Sesión', child: Column(children: [
-                const GrayField('Nombre'),
-                const GrayField('Contraseña', obscure: true),
-                const GrayField('Correo', type: TextInputType.emailAddress),
-                BlueButton('Iniciar sesión',
-                    onTap: () => Navigator.pushReplacementNamed(context, '/home')),
-                const SizedBox(height: 10),
-                TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/recuperar'),
-                    child: const Text('¿Olvidaste tu Contraseña?',
-                        style: TextStyle(fontSize: 11, color: Colors.white))),
-              ])),
-              const Divider(color: Colors.white54, indent: 16, endIndent: 16),
-              const Text('Iniciar Sesión con', style: TextStyle(fontSize: 11)),
-              const SizedBox(height: 10),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                _social(Icons.facebook, 'Facebook', Colors.blue),
-                const SizedBox(width: 16),
-                _social(Icons.g_mobiledata, 'Google', Colors.red),
-              ]),
-              const SizedBox(height: 40),
-              const Text('¿No tienes cuenta aún?', style: TextStyle(fontSize: 11)),
-              BlueButton('Crea una cuenta',
-                  onTap: () => Navigator.pushNamed(context, '/registro')),
-              const SizedBox(height: 24),
-            ]),
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword ? obscureText : false,
+        style: const TextStyle(color: Colors.black, fontSize: 13),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.black54, fontSize: 13),
+          isDense: true,
+          filled: true,
+          fillColor: const Color(0xFFD9D9D9),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    obscureText
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: Colors.black54,
+                    size: 20,
+                  ),
+                  onPressed: onToggleVisibility,
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
           ),
         ),
-      );
-
-  Widget _social(IconData i, String t, Color c) => ElevatedButton.icon(
-        onPressed: () {},
-        icon: Icon(i, color: c, size: 18),
-        label: Text(t, style: const TextStyle(color: Colors.black, fontSize: 11)),
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-      );
+      ),
+    );
+  }
 }
 
-/// Registro
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
+// Botón azul con borde negro
+class PrimaryCustomButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+
+  const PrimaryCustomButton({
+    super.key,
+    required this.text,
+    required this.onPressed,
+  });
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(children: [
-              const SizedBox(height: 24),
-              _cameraCircle(),
-              BorderPanel(title: 'Registrarse', child: Column(children: [
-                const GrayField('Nombre'),
-                const GrayField('Correo', type: TextInputType.emailAddress),
-                const GrayField('Dirección de residencia'),
-                const GrayField('Teléfono', type: TextInputType.phone),
-                const GrayField('Contraseña', obscure: true),
-                const GrayField('Confirmar contraseña', obscure: true),
-                BlueButton('Crear Cuenta', onTap: () {}),
-                const SizedBox(height: 10),
-                const Text('¿Ya tienes una cuenta?', style: TextStyle(fontSize: 11)),
-                BlueButton('Inicia sesión',
-                    onTap: () => Navigator.pushNamed(context, '/login')),
-              ])),
-            ]),
-          ),
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF0A74C0),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        minimumSize: const Size(140, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Colors.black, width: 1.5), // Borde negro
         ),
-      );
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
 }
 
-/// Recuperar contraseña
-class RecoverScreen extends StatelessWidget {
-  const RecoverScreen({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: Column(children: [
-            const SizedBox(height: 40),
-            _logo(),
-            BorderPanel(title: 'Recuperar Contraseña', child: Column(children: [
-              const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Correo', style: TextStyle(fontSize: 11))),
-              const SizedBox(height: 4),
-              const GrayField('', type: TextInputType.emailAddress),
-              BlueButton('Enviar Correo',
-                  onTap: () => Navigator.pushNamed(context, '/cambiar-clave')),
-            ])),
-          ]),
-        ),
-      );
-}
+// Botón para inicio de sesión con redes sociales
+class SocialButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final VoidCallback onPressed;
 
-/// Cambiar contraseña
-class ChangePasswordScreen extends StatelessWidget {
-  const ChangePasswordScreen({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(children: [
-              const SizedBox(height: 40),
-              _logo(),
-              const SizedBox(height: 8),
-              const Text('Cambiar Contraseña',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              BorderPanel(child: Column(children: [
-                const GrayField('Código'),
-                const GrayField('Contraseña', obscure: true),
-                const GrayField('Confirmar contraseña', obscure: true),
-                BlueButton('Cambiar contraseña',
-                    onTap: () => Navigator.pushNamed(context, '/login')),
-              ])),
-            ]),
-          ),
-        ),
-      );
-}
+  const SocialButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.onPressed,
+  });
 
-/// Perfil
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
   @override
-  Widget build(BuildContext context) => AppScaffold(
-        left: [navHome(context), navBell(context)],
-        right: [navCart(context)],
-        fab: const AiAvatar(),
-        body: SingleChildScrollView(
-          child: Column(children: [
-            const SizedBox(height: 30),
-            _cameraCircle(r: 36),
-            const SizedBox(height: 8),
-            const Text('Perfil', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            BorderPanel(child: const Column(children: [
-              GrayField('Nombre'),
-              GrayField('Correo'),
-              GrayField('Teléfono'),
-              GrayField('Dirección'),
-            ])),
-            BlueButton('Cerrar sesión',
-                onTap: () => Navigator.pushReplacementNamed(context, '/login')),
-          ]),
-        ),
-      );
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: iconColor, size: 18),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 12, color: Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF0A74C0),
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
 }
