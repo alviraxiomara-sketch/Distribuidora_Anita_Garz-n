@@ -13,7 +13,7 @@ import pedidoRoutes from "./routers/pedido-router.js";
 import pagoRoutes from "./routers/pago-router.js";
 import notificacionRoutes from "./routers/notificacion-router.js";
 import recuperarRoutes from "./routers/recuperar-router.js";
-import chatRoutes from "./routers/chatbox-router.js";
+import chatboxRouter from "./routers/chatbox-router.js";
 
 // cargamos las variables
 
@@ -37,7 +37,7 @@ app.use("/api/pedidos", pedidoRoutes);
 app.use("/api/pagos", pagoRoutes);
 app.use("/api/notificaciones", notificacionRoutes);
 app.use("/api/recuperar", recuperarRoutes);
-app.use("/api/chat", chatRoutes);
+app.use("/api/chatbox", chatboxRouter);
 
 // ruta principal
 app.get("/", (req, res) => {

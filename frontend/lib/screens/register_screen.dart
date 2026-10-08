@@ -73,16 +73,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF031A2E),
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter, // Alinea el contenido hacia arriba
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 8), // Padding superior mínimo
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
+                const SizedBox(height: 10), // Pequeño margen superior
                 GestureDetector(
                   onTap: _elegirFoto,
                   child: Container(
-                    width: 90,
-                    height: 90,
+                    width: 85,
+                    height: 85,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
@@ -92,15 +95,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : DecorationImage(image: _fotoProvider!, fit: BoxFit.cover),
                     ),
                     child: _fotoProvider == null
-                        ? const Icon(Icons.photo_camera, size: 45, color: Colors.black)
+                        ? const Icon(Icons.photo_camera, size: 40, color: Colors.black)
                         : null,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 47), // Se redujo el espacio para subir la tarjeta
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                     decoration: BoxDecoration(
                       color: const Color(0xFF063B5D),
                       borderRadius: BorderRadius.circular(20),
@@ -112,12 +115,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           'Registrarse',
                           style: TextStyle(
                             fontFamily: 'Georgia',
-                            fontSize: 20,
+                            fontSize: 30,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 17),
                         AuthTextField(hint: 'Nombre', controller: _nombreController),
                         AuthTextField(hint: 'Correo', controller: _correoController),
                         AuthTextField(hint: 'Dirección de residencia', controller: _direccionController),
@@ -136,14 +139,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           obscureText: _ocultarConfirmPassword,
                           onToggleVisibility: () => setState(() => _ocultarConfirmPassword = !_ocultarConfirmPassword),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         PrimaryCustomButton(text: 'Crear Cuenta', onPressed: _irAIniciaSesion),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         const Text(
                           '¿Ya tienes una cuenta?',
-                          style: TextStyle(fontFamily: 'Georgia', color: Colors.white, fontSize: 13),
+                          style: TextStyle(fontFamily: 'Georgia', color: Colors.white, fontSize: 17),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         PrimaryCustomButton(text: 'inicia sesion', onPressed: _irAIniciaSesion),
                       ],
                     ),

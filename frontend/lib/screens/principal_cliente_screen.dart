@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/login_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
-import 'package:frontend/widgets/home_widgets.dart'; // Importa el nuevo archivo
+import 'package:frontend/widgets/home_widgets.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -38,38 +37,56 @@ class HomeScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.notifications_none,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.shopping_cart_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          IconButton(
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
               );
             },
             icon: const Icon(
-              Icons.person_outline,
+              Icons.account_circle_outlined,
               color: Colors.white,
-              size: 22,
+              size: 26,
             ),
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           children: [
-            const SizedBox(height: 20),
-            const HomeHeaderBanner(), // Componente extraído
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: HomeHeaderBanner(),
+            ),
+            const SizedBox(height: 16),
             const Text(
               '¡Estamos listos para atenderte!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
                 fontStyle: FontStyle.italic,
-                fontSize: 17,
+                fontSize: 16,
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 24),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -85,24 +102,27 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: categorias.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.85,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: categorias.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 0.85,
+                ),
+                itemBuilder: (context, index) =>
+                    CategoriaCard(categoria: categorias[index]),
               ),
-              itemBuilder: (context, index) =>
-                  CategoriaCard(categoria: categorias[index]),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
           ],
         ),
       ),
-      bottomNavigationBar: const HomeFooterContacts(), // Componente extraído
+      bottomNavigationBar: const HomeFooterContacts(),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_chat_home',
         backgroundColor: const Color.fromARGB(255, 37, 168, 255),

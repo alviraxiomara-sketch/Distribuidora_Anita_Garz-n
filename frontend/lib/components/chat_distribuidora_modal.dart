@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/components/chat/chat_Burbuja.dart';
 import 'package:frontend/components/chat/chat_header.dart';
 import 'package:frontend/components/chat/chat_input_field.dart';
-import '../services/chatdistribuidora.dart';
+import '../../services/chatdistribuidora.dart';
 
 class ChatDistribuidoraModal extends StatefulWidget {
   const ChatDistribuidoraModal({super.key});
@@ -14,13 +14,23 @@ class ChatDistribuidoraModal extends StatefulWidget {
 class _ChatDistribuidoraModalState extends State<ChatDistribuidoraModal> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
   final List<Map<String, String>> _mensajes = [
     {
       'role': 'bot',
-      'text': '¡Hola! Bienvenido a Distribuidora Anita. ¿En qué te podemos ayudar hoy?',
-    }
+      'text':
+          '¡Hola! Bienvenido a Distribuidora Anita. ¿En qué te podemos ayudar hoy?',
+    },
   ];
+
   bool _cargando = false;
+  String? _sesionId;
+
+  @override
+  void initState() {
+    super.initState();
+    _sesionId = 'sesion_cliente_${DateTime.now().millisecondsSinceEpoch}';
+  }
 
   void _enviarMensaje() async {
     final texto = _controller.text.trim();
@@ -34,11 +44,20 @@ class _ChatDistribuidoraModalState extends State<ChatDistribuidoraModal> {
 
     _scrollHaciaAbajo();
 
-    final respuesta = await ChatDistribuidoraService.enviarMensaje(texto);
+    final resultado = await ChatDistribuidoraService.enviarMensaje(
+      texto,
+      sesionId: _sesionId,
+    );
 
     if (mounted) {
       setState(() {
-        _mensajes.add({'role': 'bot', 'text': respuesta});
+        _mensajes.add({
+          'role': 'bot',
+          'text': resultado['respuesta'] ?? 'Sin respuesta del servidor',
+        });
+        if (resultado['sesionId'] != null) {
+          _sesionId = resultado['sesionId'];
+        }
         _cargando = false;
       });
       _scrollHaciaAbajo();
@@ -102,13 +121,13 @@ class _ChatDistribuidoraModalState extends State<ChatDistribuidoraModal> {
                     height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Color.fromARGB(255, 32, 2, 12),
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(width: 8),
                   Text(
                     'El asesor está respondiendo...',
-                    style: TextStyle(color: Colors.black45, fontSize: 12),
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),

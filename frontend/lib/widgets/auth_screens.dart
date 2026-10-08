@@ -80,7 +80,7 @@ class PrimaryCustomButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: Colors.black, width: 1.5), // Borde negro
+          side: const BorderSide(color: Colors.black, width: 1.5),
         ),
       ),
       child: Text(
@@ -121,6 +121,51 @@ class SocialButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+    );
+  }
+}
+
+// Contenedor completo para los botones sociales
+class SocialLoginButtons extends StatelessWidget {
+  const SocialLoginButtons({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Row(
+          children: [
+            Expanded(child: Divider(color: Colors.white, thickness: 1)),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                'Iniciar Sesión con',
+                style: TextStyle(color: Colors.white, fontSize: 15),
+              ),
+            ),
+            Expanded(child: Divider(color: Colors.white, thickness: 1)),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SocialButton(
+              label: 'Facebook',
+              icon: Icons.facebook,
+              iconColor: const Color.fromARGB(255, 10, 28, 43),
+              onPressed: () {},
+            ),
+            const SizedBox(width: 20),
+            SocialButton(
+              label: 'Google',
+              icon: Icons.g_mobiledata,
+              iconColor: const Color.fromARGB(255, 146, 12, 2),
+              onPressed: () {},
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
