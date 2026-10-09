@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/login_screen.dart';
-import 'package:frontend/screens/profile_screen.dart';
-import 'package:frontend/components/chat_distribuidora_modal.dart';
-import 'package:frontend/widgets/home_widgets.dart'; // Importa el nuevo archivo
+import 'package:frontend/widgets/home_widgets.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,15 +16,6 @@ class HomeScreen extends StatelessWidget {
       imagenAsset: 'assets/images/energizante.jpg',
     ),
   ];
-
-  void _abrirChatDistribuidora(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF032238),
-      builder: (_) => const ChatDistribuidoraModal(),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +47,7 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            const HomeHeaderBanner(), // Componente extraído
+            const HomeHeaderBanner(),
             const SizedBox(height: 20),
             const Text(
               '¡Estamos listos para atenderte!',
@@ -102,24 +91,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const HomeFooterContacts(), // Componente extraído
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'fab_chat_home',
-        backgroundColor: const Color.fromARGB(255, 37, 168, 255),
-        elevation: 6,
-        shape: const CircleBorder(),
-        onPressed: () => _abrirChatDistribuidora(context),
-        child: ClipOval(
-          child: Image.asset(
-            'assets/images/robot.jpg',
-            width: 50,
-            height: 50,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
-                const Icon(Icons.smart_toy, color: Colors.white, size: 28),
-          ),
-        ),
-      ),
+      bottomNavigationBar: const HomeFooterContacts(),
     );
   }
 }

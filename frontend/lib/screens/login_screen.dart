@@ -3,7 +3,7 @@ import 'package:frontend/screens/principal_cliente_screen.dart';
 import 'package:frontend/screens/recover_password_screen.dart';
 import 'package:frontend/screens/register_screen.dart';
 import 'package:frontend/services/auth_service.dart';
-import 'package:frontend/widgets/auth_screens.dart';
+import 'package:frontend/widgets/login_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,10 +46,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       _mostrarMensaje(respuesta['mensaje'] ?? '¡Bienvenido!', Colors.green);
-      
-      Navigator.pushReplacement(
+
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
@@ -76,13 +77,12 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 32, // Ocupa todo el alto visible
+                  minHeight: constraints.maxHeight - 32,
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distribuye los elementos a lo largo de la pantalla
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Sección Superior: Logo
                     Center(
                       child: CircleAvatar(
                         radius: 55,
@@ -102,10 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 5),
-
-                    // Formulario
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -155,15 +152,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
-                    // Redes Sociales
                     const SocialLoginButtons(),
-
                     const SizedBox(height: 16),
-
-                    // Tarjeta Inferior de Registro
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),

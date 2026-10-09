@@ -5,11 +5,8 @@ import {crearUsuario, obtenerUsuarioPorCorreo, obtenerUsuarioCompletoPorId, obte
 // ==========================
 // REGISTRO
 // ==========================
-
 export const registro = async (req, res) => {
-
     try {
-
         const {
             nombre,
             correo,
@@ -18,18 +15,13 @@ export const registro = async (req, res) => {
             password
         } = req.body;
 
-        // Validar campos obligatorios
-
         if (!nombre || !correo || !password) {
             return res.status(400).json({
                 error: "Nombre, correo y contraseña son obligatorios"
             });
         }
 
-        // Verificar si ya existe
-
-        const { data: usuarioExiste } =
-            await obtenerUsuarioPorCorreo(correo);
+        const { data: usuarioExiste } = await obtenerUsuarioPorCorreo(correo);
 
         if (usuarioExiste) {
             return res.status(400).json({
@@ -37,12 +29,7 @@ export const registro = async (req, res) => {
             });
         }
 
-        // Encriptar contraseña
-
-        const password_hash =
-            await bcrypt.hash(password, 10);
-
-        // Crear usuario
+        const password_hash = await bcrypt.hash(password, 10);
 
         const nuevoUsuario = {
             nombre,
@@ -54,8 +41,7 @@ export const registro = async (req, res) => {
             activo: true
         };
 
-        const { data, error } =
-            await crearUsuario(nuevoUsuario);
+        const { data, error } = await crearUsuario(nuevoUsuario);
 
         if (error) {
             return res.status(500).json({
@@ -69,29 +55,25 @@ export const registro = async (req, res) => {
                 id_usuario: data.id_usuario,
                 nombre: data.nombre,
                 correo: data.correo,
+                telefono: data.telefono,
+                direccion: data.direccion,
+                foto_perfil: data.foto_perfil || null,
                 rol: data.rol
             }
         });
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
 };
-
-
 
 // ==========================
 // LOGIN
 // ==========================
-
 export const login = async (req, res) => {
-
     try {
-
         const { correo, password } = req.body;
 
         if (!correo || !password) {
@@ -100,8 +82,7 @@ export const login = async (req, res) => {
             });
         }
 
-        const { data: usuario } =
-            await obtenerUsuarioPorCorreo(correo);
+        const { data: usuario } = await obtenerUsuarioPorCorreo(correo);
 
         if (!usuario) {
             return res.status(404).json({
@@ -115,11 +96,10 @@ export const login = async (req, res) => {
             });
         }
 
-        const passwordValida =
-            await bcrypt.compare(
-                password,
-                usuario.password_hash
-            );
+        const passwordValida = await bcrypt.compare(
+            password,
+            usuario.password_hash
+        );
 
         if (!passwordValida) {
             return res.status(400).json({
@@ -147,33 +127,28 @@ export const login = async (req, res) => {
                 id_usuario: usuario.id_usuario,
                 nombre: usuario.nombre,
                 correo: usuario.correo,
+                telefono: usuario.telefono || "",
+                direccion: usuario.direccion || "",
+                foto_perfil: usuario.foto_perfil || null,
                 rol: usuario.rol
             }
         });
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
 };
-
-
 
 // ==========================
 // OBTENER PERFIL
 // ==========================
-
 export const obtenerPerfil = async (req, res) => {
-
     try {
-
         const id_usuario = req.usuario.id_usuario;
 
-        const { data, error } =
-            await obtenerUsuarioPorId(id_usuario);
+        const { data, error } = await obtenerUsuarioPorId(id_usuario);
 
         if (error) {
             return res.status(500).json({
@@ -184,44 +159,46 @@ export const obtenerPerfil = async (req, res) => {
         return res.status(200).json(data);
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
 };
 
-
-
 // ==========================
-// ACTUALIZAR PERFIL
+// ACTUALIZAR PERFIL (INCLUYE CORREO Y FOTO)
 // ==========================
-
 export const actualizarPerfil = async (req, res) => {
-
     try {
-
         const id_usuario = req.usuario.id_usuario;
 
         const {
             nombre,
+            correo,
             telefono,
             direccion,
-            foto_perfil
+            foto_perfil,
+            foto
         } = req.body;
 
-        const { data, error } =
-            await actualizarUsuario(
-                id_usuario,
-                {
-                    nombre,
-                    telefono,
-                    direccion,
-                    foto_perfil,
-                    updated_at: new Date()
-                }
-            );
+        const fotoParaGuardar = foto_perfil || foto || null;
+
+        const datosActualizar = {
+            nombre,
+            correo,
+            telefono,
+            direccion,
+            updated_at: new Date()
+        };
+
+        if (fotoParaGuardar !== null) {
+            datosActualizar.foto_perfil = fotoParaGuardar;
+        }
+
+        const { data, error } = await actualizarUsuario(
+            id_usuario,
+            datosActualizar
+        );
 
         if (error) {
             return res.status(500).json({
@@ -235,26 +212,18 @@ export const actualizarPerfil = async (req, res) => {
         });
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
 };
-
-
 
 // ==========================
 // CAMBIAR CONTRASEÑA
 // ==========================
-
 export const cambiarPassword = async (req, res) => {
-
     try {
-
         const id_usuario = req.usuario.id_usuario;
-        
 
         const {
             passwordActual,
@@ -267,14 +236,12 @@ export const cambiarPassword = async (req, res) => {
             });
         }
 
-        const { data: usuario } =
-        await obtenerUsuarioCompletoPorId(id_usuario);
+        const { data: usuario } = await obtenerUsuarioCompletoPorId(id_usuario);
 
-        const passwordValida =
-            await bcrypt.compare(
-                passwordActual,
-                usuario.password_hash
-            );
+        const passwordValida = await bcrypt.compare(
+            passwordActual,
+            usuario.password_hash
+        );
 
         if (!passwordValida) {
             return res.status(400).json({
@@ -282,14 +249,12 @@ export const cambiarPassword = async (req, res) => {
             });
         }
 
-        const nuevoHash =
-            await bcrypt.hash(passwordNueva, 10);
+        const nuevoHash = await bcrypt.hash(passwordNueva, 10);
 
-        const { error } =
-            await actualizarPassword(
-                id_usuario,
-                nuevoHash
-            );
+        const { error } = await actualizarPassword(
+            id_usuario,
+            nuevoHash
+        );
 
         if (error) {
             return res.status(500).json({
@@ -302,10 +267,8 @@ export const cambiarPassword = async (req, res) => {
         });
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
 };

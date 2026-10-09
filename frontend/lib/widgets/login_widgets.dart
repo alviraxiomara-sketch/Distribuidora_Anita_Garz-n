@@ -91,18 +91,16 @@ class PrimaryCustomButton extends StatelessWidget {
   }
 }
 
-// Botón para inicio de sesión con redes sociales
+// Botón para inicio de sesión con redes sociales (actualizado para usar imágenes de assets)
 class SocialButton extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final Color iconColor;
+  final String imagePath;
   final VoidCallback onPressed;
 
   const SocialButton({
     super.key,
     required this.label,
-    required this.icon,
-    required this.iconColor,
+    required this.imagePath,
     required this.onPressed,
   });
 
@@ -110,7 +108,14 @@ class SocialButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, color: iconColor, size: 18),
+      icon: Image.asset(
+        imagePath,
+        width: 18,
+        height: 18,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.g_mobiledata, color: Colors.white, size: 18),
+      ),
       label: Text(
         label,
         style: const TextStyle(fontSize: 12, color: Colors.white),
@@ -151,16 +156,8 @@ class SocialLoginButtons extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SocialButton(
-              label: 'Facebook',
-              icon: Icons.facebook,
-              iconColor: const Color.fromARGB(255, 10, 28, 43),
-              onPressed: () {},
-            ),
-            const SizedBox(width: 20),
-            SocialButton(
               label: 'Google',
-              icon: Icons.g_mobiledata,
-              iconColor: const Color.fromARGB(255, 146, 12, 2),
+              imagePath: 'assets/images/google.png',
               onPressed: () {},
             ),
           ],

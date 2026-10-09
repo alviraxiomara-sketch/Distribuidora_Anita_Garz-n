@@ -11,7 +11,7 @@ class CategoriaItem {
   });
 }
 
-// Banner de encabezado con Logo circular a la izquierda y frases separadas
+// Banner de encabezado con logo circular a la izquierda y frases centradas
 class HomeHeaderBanner extends StatelessWidget {
   const HomeHeaderBanner({super.key});
 
@@ -24,53 +24,60 @@ class HomeHeaderBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center, // Propiedad corregida
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Logo circular
-          Container(
-            width: 95,
-            height: 95,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFF00A8FF),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/logo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.local_drink,
-                  color: Colors.white,
-                  size: 45,
+          // Logo circular con borde azul claro
+          Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF031A2E),
+                border: Border.all(
+                  color: const Color(0xFF00A8FF),
+                  width: 3,
+                ),
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.local_drink,
+                    color: Colors.white,
+                    size: 45,
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 20),
-          // Frases de bienvenida
+          const SizedBox(width: 4),
+          // Frases de bienvenida (centradas)
           const Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, // Propiedad corregida
+              crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   'Bienvenidos a distribuciones\nde bebidas Anita',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 13.5,
-                    fontStyle: FontStyle.italic,
                     fontFamily: 'Georgia',
                     height: 1.25,
                   ),
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: 14),
                 Text(
                   'Tu mejor opción en\npedidos y distribuciones de\nbebidas',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11.5,
-                    fontStyle: FontStyle.italic,
-                    height: 1.25,
+                    color: Colors.white,
+                    fontSize: 12,
+                    height: 1.3,
                   ),
                 ),
               ],
@@ -130,7 +137,7 @@ class CategoriaCard extends StatelessWidget {
   }
 }
 
-// Pie de página con información de contacto
+// Pie de página con información de contacto (más alto, como en Figma)
 class HomeFooterContacts extends StatelessWidget {
   const HomeFooterContacts({super.key});
 
@@ -139,9 +146,9 @@ class HomeFooterContacts extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: const Color(0xFF063B5D),
-      padding: const EdgeInsets.only(top: 20, bottom: 24, left: 20, right: 20),
+      padding: const EdgeInsets.only(top: 28, bottom: 44, left: 24, right: 20),
       child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // Propiedad corregida
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
@@ -153,7 +160,7 @@ class HomeFooterContacts extends StatelessWidget {
               fontFamily: 'Georgia',
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 12),
           Row(
             children: [
               Icon(Icons.phone, color: Color(0xFFBCAAA4), size: 16),
@@ -164,7 +171,7 @@ class HomeFooterContacts extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 4),
+          SizedBox(height: 8),
           Row(
             children: [
               Icon(Icons.location_on, color: Colors.redAccent, size: 16),

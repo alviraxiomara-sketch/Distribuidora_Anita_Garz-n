@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart' as img_picker;
 import 'package:frontend/screens/login_screen.dart';
-import 'package:frontend/widgets/auth_screens.dart';
+import 'package:frontend/services/auth_service.dart';
+import 'package:frontend/widgets/login_widgets.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -23,7 +24,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _ocultarPassword = true;
   bool _ocultarConfirmPassword = true;
+  bool _cargando = false;
 
+  final AuthService _authService = AuthService();
   final img_picker.ImagePicker _picker = img_picker.ImagePicker();
   img_picker.XFile? _foto;
 
@@ -48,9 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (imagen != null) setState(() => _foto = imagen);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir la galería')),
-      );
+      _mostrarMensaje('No se pudo abrir la galería', Colors.orange);
     }
   }
 
@@ -68,19 +69,81 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  void _mostrarMensaje(String texto, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(texto), backgroundColor: color),
+    );
+  }
+
+  Future<void> _handleRegister() async {
+    final nombre = _nombreController.text.trim();
+    final correo = _correoController.text.trim();
+    final direccion = _direccionController.text.trim();
+    final telefono = _telefonoController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    // Validaciones
+    if (nombre.isEmpty ||
+        correo.isEmpty ||
+        direccion.isEmpty ||
+        telefono.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      _mostrarMensaje('Por favor, completa todos los campos', Colors.orange);
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _mostrarMensaje('Las contraseñas no coinciden', Colors.orange);
+      return;
+    }
+
+    if (password.length < 6) {
+      _mostrarMensaje('La contraseña debe tener al menos 6 caracteres', Colors.orange);
+      return;
+    }
+
+    setState(() => _cargando = true);
+
+    try {
+      final respuesta = await _authService.registrar(
+        nombre: nombre,
+        correo: correo,
+        direccion: direccion,
+        telefono: telefono,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      _mostrarMensaje(
+        respuesta['mensaje'] ?? '¡Cuenta creada con éxito!',
+        Colors.green,
+      );
+
+      _irAIniciaSesion();
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarMensaje(e.toString().replaceAll('Exception: ', ''), Colors.red);
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF031A2E),
       body: SafeArea(
         child: Align(
-          alignment: Alignment.topCenter, // Alinea el contenido hacia arriba
+          alignment: Alignment.topCenter,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 8), // Padding superior mínimo
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                const SizedBox(height: 10), // Pequeño margen superior
+                const SizedBox(height: 10),
                 GestureDetector(
                   onTap: _elegirFoto,
                   child: Container(
@@ -99,7 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : null,
                   ),
                 ),
-                const SizedBox(height: 47), // Se redujo el espacio para subir la tarjeta
+                const SizedBox(height: 47),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Container(
@@ -140,7 +203,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onToggleVisibility: () => setState(() => _ocultarConfirmPassword = !_ocultarConfirmPassword),
                         ),
                         const SizedBox(height: 10),
-                        PrimaryCustomButton(text: 'Crear Cuenta', onPressed: _irAIniciaSesion),
+                        _cargando
+                            ? const CircularProgressIndicator(color: Color(0xFF00A8FF))
+                            : PrimaryCustomButton(text: 'Crear Cuenta', onPressed: _handleRegister),
                         const SizedBox(height: 10),
                         const Text(
                           '¿Ya tienes una cuenta?',
