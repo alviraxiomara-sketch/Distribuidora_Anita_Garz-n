@@ -12,7 +12,10 @@ export const registro = async (req, res) => {
             correo,
             telefono,
             direccion,
-            password
+            password,
+            foto_perfil,
+            foto,
+            avatar // <--- Añadido para capturar avatar desde Flutter
         } = req.body;
 
         if (!nombre || !correo || !password) {
@@ -30,6 +33,7 @@ export const registro = async (req, res) => {
         }
 
         const password_hash = await bcrypt.hash(password, 10);
+        const fotoParaGuardar = foto_perfil || foto || avatar || null;
 
         const nuevoUsuario = {
             nombre,
@@ -37,6 +41,7 @@ export const registro = async (req, res) => {
             telefono: telefono || null,
             direccion: direccion || null,
             password_hash,
+            foto_perfil: fotoParaGuardar,
             rol: "CLIENTE",
             activo: true
         };
@@ -178,10 +183,11 @@ export const actualizarPerfil = async (req, res) => {
             telefono,
             direccion,
             foto_perfil,
-            foto
+            foto,
+            avatar // <--- Añadido para capturar avatar al actualizar
         } = req.body;
 
-        const fotoParaGuardar = foto_perfil || foto || null;
+        const fotoParaGuardar = foto_perfil || foto || avatar || null;
 
         const datosActualizar = {
             nombre,

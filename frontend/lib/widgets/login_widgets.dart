@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/home_screen.dart';
+import 'package:frontend/screens/principal_cliente_screen.dart';
+import 'package:frontend/services/auth_service.dart';
 
 // Campo de texto personalizado con soporte para ocultar/mostrar contraseña
 class AuthTextField extends StatelessWidget {
@@ -91,7 +94,7 @@ class PrimaryCustomButton extends StatelessWidget {
   }
 }
 
-// Botón para inicio de sesión con redes sociales (actualizado para usar imágenes de assets)
+// Botón para inicio de sesión con redes sociales (Actualizado con el mismo tamaño y bordes exactos)
 class SocialButton extends StatelessWidget {
   final String label;
   final String imagePath;
@@ -118,13 +121,18 @@ class SocialButton extends StatelessWidget {
       ),
       label: Text(
         label,
-        style: const TextStyle(fontSize: 12, color: Colors.white),
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white),
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF0A74C0),
+        foregroundColor: Colors.white,
         elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        minimumSize: const Size(140, 36), // Mismo tamaño mínimo que PrimaryCustomButton
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6), // Mismo padding exacto
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8), // Mismos bordes de 8
+          side: const BorderSide(color: Colors.black, width: 2), // Mismo borde negro idéntico
+        ),
       ),
     );
   }
@@ -151,14 +159,42 @@ class SocialLoginButtons extends StatelessWidget {
             Expanded(child: Divider(color: Colors.white, thickness: 1)),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 30),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SocialButton(
               label: 'Google',
               imagePath: 'assets/images/google.png',
-              onPressed: () {},
+              onPressed: () async {
+                try {
+                  AuthService authService = AuthService();
+                  await authService.loginConGoogle();
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('¡Bienvenido con Google!'), 
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString().replaceAll('Exception: ', '')), 
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
             ),
           ],
         ),

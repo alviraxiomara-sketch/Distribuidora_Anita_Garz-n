@@ -1,34 +1,32 @@
 import 'dart:convert';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_config.dart';
 
 class AuthService {
-  // Obtener datos del usuario guardados localmente
-  static Future<Map<String, String?>> getUsuario() async {
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+
+  // ==========================
+  // GUARDAR SESIÓN LOCAL
+  // ==========================
+  static Future<void> _guardarSesion(
+    String token,
+    Map<String, dynamic> usuario,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    return {
-      'nombre': prefs.getString('nombre'),
-      'correo': prefs.getString('correo'),
-      'telefono': prefs.getString('telefono'),
-      'direccion': prefs.getString('direccion'),
-      'foto': prefs.getString('foto'),
-    };
+    await prefs.setString('token', token);
+    await prefs.setString('usuario', jsonEncode(usuario));
   }
 
-  // Cerrar sesión y limpiar TODOS los datos almacenados localmente
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-  }
-
-  // Método para Iniciar Sesión y Guardar Datos Localmente
+  // ==========================
+  // LOGIN TRADICIONAL
+  // ==========================
   Future<Map<String, dynamic>> login({
     required String correo,
     required String password,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/auth/login');
-
     final response = await http.post(
       url,
       headers: ApiConfig.headers,
@@ -36,32 +34,10 @@ class AuthService {
     );
 
     final data = jsonDecode(response.body);
-
     if (response.statusCode == 200) {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Limpiamos los datos del usuario anterior
-      await prefs.clear();
-
-      final usuario = data['usuario'] ?? data['user'] ?? data;
-
-      await prefs.setString('nombre', usuario['nombre'] ?? '');
-      await prefs.setString('correo', usuario['correo'] ?? correo);
-      await prefs.setString('telefono', usuario['telefono'] ?? '');
-      await prefs.setString('direccion', usuario['direccion'] ?? '');
-
-      // Guardamos la foto del usuario recibida desde Supabase
-      final fotoUsuario = usuario['foto_perfil'] ?? usuario['foto'];
-      if (fotoUsuario != null && fotoUsuario.toString().isNotEmpty) {
-        await prefs.setString('foto', fotoUsuario);
-      } else {
-        await prefs.remove('foto');
+      if (data['token'] != null && data['usuario'] != null) {
+        await _guardarSesion(data['token'], data['usuario']);
       }
-
-      if (data['token'] != null) {
-        await prefs.setString('token', data['token']);
-      }
-
       return data;
     } else {
       throw Exception(
@@ -70,16 +46,18 @@ class AuthService {
     }
   }
 
-  // Método para Registrar Usuario
+  // ==========================
+  // REGISTRO
+  // ==========================
   Future<Map<String, dynamic>> registrar({
     required String nombre,
     required String correo,
     required String direccion,
     required String telefono,
     required String password,
+    String? fotoBase64,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/auth/register');
-
     final response = await http.post(
       url,
       headers: ApiConfig.headers,
@@ -89,28 +67,57 @@ class AuthService {
         'direccion': direccion,
         'telefono': telefono,
         'password': password,
+        'avatar': fotoBase64,
       }),
     );
 
     final data = jsonDecode(response.body);
-
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-
-      await prefs.setString('nombre', nombre);
-      await prefs.setString('correo', correo);
-      await prefs.setString('telefono', telefono);
-      await prefs.setString('direccion', direccion);
+      if (data['token'] != null && data['usuario'] != null) {
+        await _guardarSesion(data['token'], data['usuario']);
+      }
       return data;
     } else {
       throw Exception(
-        data['error'] ?? data['mensaje'] ?? 'Error al registrar usuario',
+        data['error'] ?? data['mensaje'] ?? 'Error al registrar el usuario',
       );
     }
   }
 
-  // Actualizar Perfil en Backend y Localmente
+  // ==========================
+  // PERFIL Y SESIÓN LOCAL (Con mapeo exhaustivo de la foto)
+  // ==========================
+  static Future<Map<String, dynamic>> getUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    final usuarioString = prefs.getString('usuario');
+
+    if (usuarioString != null && usuarioString.isNotEmpty) {
+      try {
+        final Map<String, dynamic> usuarioMap = jsonDecode(usuarioString);
+
+        // Si el JSON está vacío o no tiene un correo válido, limpiamos el caché fantasma
+        if (usuarioMap.isEmpty ||
+            (usuarioMap['correo'] == null && usuarioMap['nombre'] == null)) {
+          await prefs.clear();
+          return {};
+        }
+
+        return {
+          'nombre': usuarioMap['nombre'] ?? '',
+          'correo': usuarioMap['correo'] ?? '',
+          'telefono': usuarioMap['telefono'] ?? '',
+          'direccion': usuarioMap['direccion'] ?? '',
+          // Buscamos en todas las variantes posibles para que nunca llegue vacía
+          'foto': usuarioMap['foto_perfil'] ?? usuarioMap['avatar'] ?? usuarioMap['foto'] ?? '',
+        };
+      } catch (e) {
+        await prefs.clear();
+        return {};
+      }
+    }
+    return {};
+  }
+
   static Future<void> actualizarPerfil({
     required String nombre,
     required String correo,
@@ -119,47 +126,104 @@ class AuthService {
     String? fotoBase64,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final token = prefs.getString('token');
+    final usuarioString = prefs.getString('usuario');
+
+    if (usuarioString == null) throw Exception('No hay sesión activa');
+
+    final Map<String, dynamic> usuarioMap = jsonDecode(usuarioString);
 
     final url = Uri.parse('${ApiConfig.baseUrl}/auth/profile');
 
-    final Map<String, dynamic> bodyData = {
-      'nombre': nombre,
-      'correo': correo,
-      'telefono': telefono,
-      'direccion': direccion,
-    };
-
-    if (fotoBase64 != null) {
-      bodyData['foto'] = fotoBase64;
-      bodyData['foto_perfil'] = fotoBase64;
-    }
-
     final response = await http.put(
       url,
-      headers: {...ApiConfig.headers, 'Authorization': 'Bearer $token'},
-      body: jsonEncode(bodyData),
+      headers: {
+        ...ApiConfig.headers,
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'nombre': nombre,
+        'correo': correo,
+        'telefono': telefono,
+        'direccion': direccion,
+        'avatar': fotoBase64,
+      }),
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      await prefs.setString('nombre', nombre);
-      await prefs.setString('correo', correo);
-      await prefs.setString('telefono', telefono);
-      await prefs.setString('direccion', direccion);
-      if (fotoBase64 != null) {
-        await prefs.setString('foto', fotoBase64);
-      }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final usuarioActualizado =
+          data['usuario'] ??
+          {
+            ...usuarioMap,
+            'nombre': nombre,
+            'correo': correo,
+            'telefono': telefono,
+            'direccion': direccion,
+            if (fotoBase64 != null) 'avatar': fotoBase64,
+          };
+      await _guardarSesion(token ?? '', usuarioActualizado);
     } else {
-      try {
-        final data = jsonDecode(response.body);
-        throw Exception(
-          data['error'] ?? data['mensaje'] ?? 'Error al actualizar perfil',
-        );
-      } catch (e) {
-        throw Exception(
-          'Error en el servidor (${response.statusCode}). Revisa que el backend esté corriendo.',
-        );
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
+          response.body.trim().startsWith('<html')) {
+        throw Exception('Error del servidor (Ruta no encontrada o error 500)');
       }
+      final data = jsonDecode(response.body);
+      throw Exception(
+        data['error'] ?? data['mensaje'] ?? 'Error al actualizar perfil',
+      );
+    }
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
+  }
+
+  // ==========================
+  // GOOGLE SIGN-IN SIMPLIFICADO
+  // ==========================
+  Future<Map<String, dynamic>> loginConGoogle() async {
+    await _googleSignIn.signOut();
+
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
+      throw Exception('Inicio de sesión con Google cancelado');
+    }
+
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+    final String idToken =
+        googleAuth.idToken ??
+        googleAuth.accessToken ??
+        'token_alternativo_google';
+
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/google');
+
+    final response = await http.post(
+      url,
+      headers: ApiConfig.headers,
+      body: jsonEncode({
+        'idToken': idToken,
+        'correo': googleUser.email,
+        'nombre': googleUser.displayName,
+        'avatar': googleUser.photoUrl,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['token'] != null && data['usuario'] != null) {
+        await _guardarSesion(data['token'], data['usuario']);
+      }
+      return data;
+    } else {
+      throw Exception(
+        data['error'] ?? data['mensaje'] ?? 'Error al autenticar con Google',
+      );
     }
   }
 }

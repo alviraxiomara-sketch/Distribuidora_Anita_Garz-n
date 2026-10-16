@@ -9,7 +9,8 @@ export const crearUsuario = async (usuario) => {
         rol, 
         telefono, 
         direccion, 
-        activo 
+        activo,
+        foto_perfil 
     } = usuario;
 
     const { data, error } = await supabase
@@ -17,15 +18,16 @@ export const crearUsuario = async (usuario) => {
         .insert([
             {
                 nombre,
-                correo,
+                correo: correo ? correo.toLowerCase().trim() : correo,
                 password_hash,
                 rol,
                 telefono,
                 direccion,
-                activo
+                activo,
+                foto_perfil
             }
         ])
-        .select("id_usuario, nombre, correo, rol")
+        .select("id_usuario, nombre, correo, telefono, direccion, foto_perfil, rol")
         .single();
 
     return { data, error };
@@ -50,23 +52,25 @@ export const obtenerUsuarios = async () => {
     return { data, error };
 };
 
-// Buscar por correo
+// Buscar por correo (Normalizado)
 export const obtenerUsuarioPorCorreo = async (correo) => {
+    const correoLimpio = correo ? correo.toLowerCase().trim() : '';
     const { data, error } = await supabase
         .from("usuarios")
         .select("*")
-        .eq("correo", correo)
+        .eq("correo", correoLimpio)
         .maybeSingle();
 
     return { data, error };
 };
 
-// 1. Obtener usuario existente por correo (versión para autenticación con Google)
+// Obtener usuario existente por correo (versión para autenticación con Google)
 export const obtenerPorEmail = async (correo) => {
+    const correoLimpio = correo ? correo.toLowerCase().trim() : '';
     const { data, error } = await supabase
         .from('usuarios')
         .select('*')
-        .eq('correo', correo)
+        .eq('correo', correoLimpio)
         .maybeSingle();
 
     return { data, error };
@@ -93,9 +97,10 @@ export const obtenerUsuarioPorId = async (id_usuario) => {
     return { data, error };
 };
 
-// 2. Función específica para los usuarios autenticados con Google
+// Función específica para los usuarios autenticados con Google (CORREGIDA)
 export const crearUsuarioGoogle = async ({ nombre, correo, email, googleId, avatar = null, rol = 'CLIENTE' }) => {
-    const correoFinal = correo || email;
+    const correoCrudo = correo || email;
+    const correoFinal = correoCrudo ? correoCrudo.toLowerCase().trim() : correoCrudo;
 
     const { data, error } = await supabase
         .from('usuarios')
@@ -106,16 +111,26 @@ export const crearUsuarioGoogle = async ({ nombre, correo, email, googleId, avat
             rol,
             isVerified: true,
             googleId,
-            avatar
+            foto_perfil: avatar // <--- Asignamos correctamente el avatar a la columna real
         })
-        .select('id_usuario, nombre, correo, rol, avatar')
+        .select('id_usuario, nombre, correo, rol, foto_perfil') // <--- Seleccionamos la columna real
         .single();
 
     return { data, error };
 };
 
-// Actualizar usuario
+// Actualizar usuario (CORREGIDO PARA MAPEAR AVATAR A FOTO_PERFIL)
 export const actualizarUsuario = async (id_usuario, campos) => {
+    if (campos.correo) {
+        campos.correo = campos.correo.toLowerCase().trim();
+    }
+    
+    // Si la petición trae 'avatar', lo convertimos a 'foto_perfil' que es como se llama en Supabase
+    if (campos.avatar !== undefined) {
+        campos.foto_perfil = campos.avatar;
+        delete campos.avatar; // Borramos 'avatar' para que Supabase no lance error de columna inexistente
+    }
+
     const { data, error } = await supabase
         .from('usuarios')
         .update(campos)
@@ -131,7 +146,6 @@ export const actualizarPassword = async (
     id_usuario,
     password_hash
 ) => {
-
     const { data, error } = await supabase
         .from("usuarios")
         .update({
@@ -146,7 +160,6 @@ export const actualizarPassword = async (
 
 // Obtener usuario completo para procesos internos
 export const obtenerUsuarioCompletoPorId = async (id_usuario) => {
-
     const { data, error } = await supabase
         .from("usuarios")
         .select("*")

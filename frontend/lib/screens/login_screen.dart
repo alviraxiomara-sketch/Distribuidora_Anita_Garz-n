@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/home_screen.dart';
 import 'package:frontend/screens/principal_cliente_screen.dart';
-import 'package:frontend/screens/recover_password_screen.dart';
+import 'package:frontend/screens/recuperar_password_screen.dart';
 import 'package:frontend/screens/register_screen.dart';
 import 'package:frontend/services/auth_service.dart';
 import 'package:frontend/widgets/login_widgets.dart';
@@ -47,14 +48,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
       _mostrarMensaje(respuesta['mensaje'] ?? '¡Bienvenido!', Colors.green);
 
+      // Redirige correctamente a la pantalla principal del cliente
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const PrincipalClienteScreen()),
         (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
       _mostrarMensaje(e.toString().replaceAll('Exception: ', ''), Colors.red);
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _cargando = true);
+
+    try {
+      final respuesta = await _authService.loginConGoogle();
+      if (!mounted) return;
+
+      _mostrarMensaje(respuesta['mensaje'] ?? '¡Bienvenido con Google!', const Color.fromARGB(255, 49, 165, 219));
+
+      // Redirige correctamente a la pantalla principal del cliente
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const PrincipalClienteScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final mensaje = e.toString().replaceAll('Exception: ', '');
+      if (!mensaje.contains('cancelado')) {
+        _mostrarMensaje(mensaje, Colors.red);
+      }
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
@@ -134,14 +162,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             onToggleVisibility: () =>
                                 setState(() => _ocultarPassword = !_ocultarPassword),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 20),
                           _cargando
                               ? const CircularProgressIndicator(color: Color(0xFF00A8FF))
                               : PrimaryCustomButton(
                                   text: 'Iniciar Sesión',
                                   onPressed: _handleLogin,
                                 ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 20),
                           GestureDetector(
                             onTap: () => _irA(const RecoverPasswordScreen()),
                             child: const Text(
@@ -153,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const SocialLoginButtons(),
+                    SocialLoginButtons(),
                     const SizedBox(height: 16),
                     Container(
                       width: double.infinity,

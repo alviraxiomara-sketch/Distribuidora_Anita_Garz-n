@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' as img_picker;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
 import 'package:frontend/screens/home_screen.dart';
+import 'package:frontend/services/api_config.dart';
 import 'package:frontend/services/auth_service.dart';
 import 'package:frontend/widgets/profile_widgets.dart';
 
@@ -14,30 +17,80 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _nombre = TextEditingController(), _correo = TextEditingController();
-  final _telefono = TextEditingController(), _direccion = TextEditingController();
-  final _fNombre = FocusNode(), _fCorreo = FocusNode(), _fTelefono = FocusNode(), _fDireccion = FocusNode();
+  final _nombre = TextEditingController();
+  final _correo = TextEditingController();
+  final _telefono = TextEditingController();
+  final _direccion = TextEditingController();
+
+  final _fNombre = FocusNode();
+  final _fCorreo = FocusNode();
+  final _fTelefono = FocusNode();
+  final _fDireccion = FocusNode();
+
   final img_picker.ImagePicker _picker = img_picker.ImagePicker();
 
   img_picker.XFile? _fotoNueva;
   String? _fotoGuardada;
-  bool _cargando = false, _editando = false;
+  bool _cargando = false;
+  bool _editando = false;
 
   @override
   void initState() {
     super.initState();
-    _cargarDatos();
+    _cargarDatosServidor();
   }
 
-  Future<void> _cargarDatos() async {
-    final d = await AuthService.getUsuario();
-    setState(() {
-      _nombre.text = d['nombre'] ?? '';
-      _correo.text = d['correo'] ?? '';
-      _telefono.text = d['telefono'] ?? '';
-      _direccion.text = d['direccion'] ?? '';
-      _fotoGuardada = d['foto'];
-    });
+  // Carga los datos frescos directamente del backend (y de respaldo usa local)
+  Future<void> _cargarDatosServidor() async {
+    setState(() => _cargando = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      final url = Uri.parse('${ApiConfig.baseUrl}/auth/profile');
+      final response = await http.get(
+        url,
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final usuario = data['usuario'] ?? data;
+        
+        setState(() {
+          _nombre.text = usuario['nombre'] ?? '';
+          _correo.text = usuario['correo'] ?? '';
+          _telefono.text = usuario['telefono'] ?? '';
+          _direccion.text = usuario['direccion'] ?? '';
+          _fotoGuardada = usuario['avatar'] ?? usuario['foto_perfil'];
+        });
+      } else {
+        // Respaldo con SharedPreferences si la red falla
+        final datosLocales = await AuthService.getUsuario();
+        setState(() {
+          _nombre.text = datosLocales['nombre'] ?? '';
+          _correo.text = datosLocales['correo'] ?? '';
+          _telefono.text = datosLocales['telefono'] ?? '';
+          _direccion.text = datosLocales['direccion'] ?? '';
+          _fotoGuardada = datosLocales['foto'];
+        });
+      }
+    } catch (e) {
+      // Respaldo local si ocurre cualquier excepción
+      final datosLocales = await AuthService.getUsuario();
+      setState(() {
+        _nombre.text = datosLocales['nombre'] ?? '';
+        _correo.text = datosLocales['correo'] ?? '';
+        _telefono.text = datosLocales['telefono'] ?? '';
+        _direccion.text = datosLocales['direccion'] ?? '';
+        _fotoGuardada = datosLocales['foto'];
+      });
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
   }
 
   Future<void> _guardarCambios() async {
@@ -68,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Perfil actualizado en la BD!'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('¡Perfil actualizado con éxito!'), backgroundColor: Colors.green),
       );
     } catch (e) {
       if (!mounted) return;
@@ -83,13 +136,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _cerrarSesion() async {
     await AuthService.logout();
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      (route) => false,
+    );
   }
 
   @override
   void dispose() {
-    _nombre.dispose(); _correo.dispose(); _telefono.dispose(); _direccion.dispose();
-    _fNombre.dispose(); _fCorreo.dispose(); _fTelefono.dispose(); _fDireccion.dispose();
+    _nombre.dispose();
+    _correo.dispose();
+    _telefono.dispose();
+    _direccion.dispose();
+    _fNombre.dispose();
+    _fCorreo.dispose();
+    _fTelefono.dispose();
+    _fDireccion.dispose();
     super.dispose();
   }
 
@@ -102,49 +165,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF031A2E),
-      appBar: AppBar(backgroundColor: const Color(0xFF031A2E), elevation: 0, iconTheme: const IconThemeData(color: Colors.white)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            ProfileAvatar(
-              fotoNueva: _fotoNueva,
-              fotoGuardada: _fotoGuardada,
-              onTap: () async {
-                final img = await _picker.pickImage(source: img_picker.ImageSource.gallery, maxWidth: 400, maxHeight: 400, imageQuality: 35);
-                if (img != null) setState(() { _fotoNueva = img; _editando = true; });
-              },
-            ),
-            const SizedBox(height: 8),
-            const Text('Perfil', style: TextStyle(fontFamily: 'Georgia', color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 16, 14, 8),
-              decoration: BoxDecoration(color: const Color(0xFF084B75), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF00A8FF), width: 2)),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF031A2E),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: _cargando
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  CampoEditable(hint: 'Nombre', controller: _nombre, focusNode: _fNombre, onEdit: () => _activar(_fNombre), onChanged: () => setState(() => _editando = true)),
-                  CampoEditable(hint: 'Correo', controller: _correo, focusNode: _fCorreo, tipo: TextInputType.emailAddress, onEdit: () => _activar(_fCorreo), onChanged: () => setState(() => _editando = true)),
-                  CampoEditable(hint: 'Teléfono', controller: _telefono, focusNode: _fTelefono, tipo: TextInputType.phone, onEdit: () => _activar(_fTelefono), onChanged: () => setState(() => _editando = true)),
-                  CampoEditable(hint: 'Dirección', controller: _direccion, focusNode: _fDireccion, onEdit: () => _activar(_fDireccion), onChanged: () => setState(() => _editando = true)),
+                  const SizedBox(height: 10),
+                  ProfileAvatar(
+                    fotoNueva: _fotoNueva,
+                    fotoGuardada: _fotoGuardada,
+                    onTap: () async {
+                      final img = await _picker.pickImage(
+                        source: img_picker.ImageSource.gallery,
+                        maxWidth: 400,
+                        maxHeight: 400,
+                        imageQuality: 35,
+                      );
+                      if (img != null) {
+                        setState(() {
+                          _fotoNueva = img;
+                          _editando = true;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Mi Perfil',
+                    style: TextStyle(
+                      fontFamily: 'Georgia',
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 16, 14, 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF084B75),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF00A8FF), width: 2),
+                    ),
+                    child: Column(
+                      children: [
+                        CampoEditable(
+                          hint: 'Nombre',
+                          controller: _nombre,
+                          focusNode: _fNombre,
+                          onEdit: () => _activar(_fNombre),
+                          onChanged: () => setState(() => _editando = true),
+                        ),
+                        CampoEditable(
+                          hint: 'Correo',
+                          controller: _correo,
+                          focusNode: _fCorreo,
+                          tipo: TextInputType.emailAddress,
+                          onEdit: () => _activar(_fCorreo),
+                          onChanged: () => setState(() => _editando = true),
+                        ),
+                        CampoEditable(
+                          hint: 'Teléfono',
+                          controller: _telefono,
+                          focusNode: _fTelefono,
+                          tipo: TextInputType.phone,
+                          onEdit: () => _activar(_fTelefono),
+                          onChanged: () => setState(() => _editando = true),
+                        ),
+                        CampoEditable(
+                          hint: 'Dirección',
+                          controller: _direccion,
+                          focusNode: _fDireccion,
+                          onEdit: () => _activar(_fDireccion),
+                          onChanged: () => setState(() => _editando = true),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Column(
+                    children: [
+                      if (_editando) BotonGuardar(onPressed: _guardarCambios),
+                      if (_editando) const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _cerrarSesion,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0A74C0),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Cerrar sesión', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 60),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            if (_cargando) const CircularProgressIndicator(color: Color(0xFF00A8FF))
-            else Column(
-              children: [
-                if (_editando) BotonGuardar(onPressed: _guardarCambios),
-                if (_editando) const SizedBox(height: 10),
-                ElevatedButton(onPressed: _cerrarSesion, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0A74C0), foregroundColor: Colors.white), child: const Text('Cerrar sesión', style: TextStyle(fontSize: 12))),
-              ],
-            ),
-            const SizedBox(height: 60),
-          ],
+      floatingActionButton: ChatFab(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const ChatDistribuidoraModal(),
         ),
       ),
-      floatingActionButton: ChatFab(onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => const ChatDistribuidoraModal())),
     );
   }
 }
