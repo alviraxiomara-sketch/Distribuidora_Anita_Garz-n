@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/login_screen.dart';
-import 'package:frontend/services/auth_service.dart';
+import 'package:frontend/screens/gaseosas_screen.dart'; // Importa tu pantalla de catálogo
 import 'package:frontend/widgets/home_widgets.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -134,8 +133,26 @@ class AppDrawer extends StatelessWidget {
                     size: 16,
                   ),
                   onTap: () {
+                    // Cierra el menú lateral primero
                     Navigator.pop(context);
-                    // TODO: Navegar a la categoría seleccionada
+
+                    // Verifica si la categoría seleccionada es Gaseosas
+                    if (cat.nombre == 'Gaseosas') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CatalogoProductosScreen(),
+                        ),
+                      );
+                    } else {
+                      // Opcional para las demás categorías mientras las creas
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Categoría ${cat.nombre} próximamente disponible'),
+                          backgroundColor: const Color(0xFF063B5D),
+                        ),
+                      );
+                    }
                   },
                 ),
               ),

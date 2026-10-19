@@ -89,7 +89,7 @@ class HomeHeaderBanner extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Distribuciones\nBebidas Anita',
+                  'Distribuciones De\nBebidas Anita',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -196,7 +196,7 @@ class HomeFooterContacts extends StatelessWidget {
               Icon(Icons.headset_mic_rounded, color: Color(0xFF00A8FF), size: 18),
               SizedBox(width: 8),
               Text(
-                'Canales de Atención',
+                'Servicios de Atención',
                 style: TextStyle(
                   color: Color(0xFF00A8FF),
                   fontSize: 15,

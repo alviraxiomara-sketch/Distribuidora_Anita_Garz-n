@@ -88,7 +88,7 @@ class PrincipalClienteScreen extends StatelessWidget {
                 color: const Color(0xFF063B5D).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xFF00A8FF).withOpacity(0.3),
+                  color: const Color(0xFF00A8FF).withOpacity(0.5),
                   width: 1,
                 ),
               ),
@@ -129,7 +129,7 @@ class PrincipalClienteScreen extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFF00A8FF).withOpacity(0.2),
+                  color: const Color(0xFF00A8FF).withOpacity(0.5),
                 ),
               ),
               child: Column(
@@ -200,7 +200,7 @@ class PrincipalClienteScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF031A2E),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.4)),
+            border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.5)),
           ),
           child: Icon(icon, color: const Color(0xFF00A8FF), size: 20),
         ),

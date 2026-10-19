@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/login_screen.dart';
+import 'package:frontend/screens/principal_cliente_screen.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/home_widgets.dart';
 
@@ -28,11 +29,20 @@ class HomeScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final resultado = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
+
+              if (resultado == true && context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PrincipalClienteScreen(),
+                  ),
+                );
+              }
             },
             icon: const Icon(
               Icons.person_outline,
@@ -51,8 +61,8 @@ class HomeScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 30),
             const HomeHeaderBanner(),
-            const SizedBox(height: 30),
-            
+            const SizedBox(height: 40),
+
             // Tarjeta de aviso estilizada
             Container(
               width: double.infinity,
@@ -61,7 +71,7 @@ class HomeScreen extends StatelessWidget {
                 color: const Color(0xFF063B5D).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xFF00A8FF).withOpacity(0.3),
+                  color: const Color(0xFF00A8FF).withOpacity(0.5),
                   width: 1,
                 ),
               ),
@@ -83,7 +93,7 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 30),
 
             // SECCIÓN CENTRAL: Destacados / Beneficios
@@ -98,7 +108,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFF00A8FF).withOpacity(0.2),
+                  color: const Color(0xFF00A8FF).withOpacity(0.5),
                 ),
               ),
               child: Column(
@@ -152,7 +162,7 @@ class HomeScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF031A2E),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.4)),
+            border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.5)),
           ),
           child: Icon(icon, color: const Color(0xFF00A8FF), size: 20),
         ),
