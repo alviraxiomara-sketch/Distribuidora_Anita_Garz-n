@@ -3,6 +3,7 @@ import 'package:frontend/screens/coca_cola_screen.dart';
 import 'package:frontend/screens/home_screen.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/catalogo_widgets.dart';
+import 'package:frontend/widgets/home_footer_contacts.dart';
 import 'package:frontend/widgets/home_widgets.dart';
 
 class CatalogoProductosScreen extends StatelessWidget {

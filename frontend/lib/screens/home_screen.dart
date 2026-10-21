@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/screens/login_screen.dart';
 import 'package:frontend/screens/principal_cliente_screen.dart';
 import 'package:frontend/widgets/app_drawer.dart';
+import 'package:frontend/widgets/home_footer_contacts.dart';
 import 'package:frontend/widgets/home_widgets.dart';
 
 class HomeScreen extends StatelessWidget {

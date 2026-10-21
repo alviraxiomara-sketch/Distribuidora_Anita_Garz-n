@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/home_screen.dart';
+import 'package:frontend/services/carrito_helper.dart'; // <--- IMPORTANTE: Importamos el helper
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/coca_cola_widgets.dart';
+import 'package:frontend/widgets/home_footer_contacts.dart';
 import 'package:frontend/widgets/home_widgets.dart';
 
 class CocaColaScreen extends StatefulWidget {
@@ -89,7 +91,7 @@ class _CocaColaScreenState extends State<CocaColaScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Producto 1
+            // Producto 1 (Cambia el '1' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 0,
               nombre: 'Coca Cola',
@@ -99,16 +101,15 @@ class _CocaColaScreenState extends State<CocaColaScreen> {
               cantidad: _cantidades[0] ?? 1,
               onCantidadChanged: _cambiarCantidad,
               onAgregarAlCarrito: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('¡Coca Cola 1/2 L agregada al carrito! (${_cantidades[0]} und)'),
-                    backgroundColor: Colors.green,
-                  ),
+                manejarAgregarAlCarrito(
+                  context,
+                  1, // <--- Reemplaza con el ID real de Coca Cola en la tabla 'productos'
+                  _cantidades[0] ?? 1,
                 );
               },
             ),
 
-            // Producto 2
+            // Producto 2 (Cambia el '2' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 1,
               nombre: 'Sprite',
@@ -118,16 +119,15 @@ class _CocaColaScreenState extends State<CocaColaScreen> {
               cantidad: _cantidades[1] ?? 1,
               onCantidadChanged: _cambiarCantidad,
               onAgregarAlCarrito: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('¡Sprite 1.5 L agregada al carrito! (${_cantidades[1]} und)'),
-                    backgroundColor: Colors.green,
-                  ),
+                manejarAgregarAlCarrito(
+                  context,
+                  2, // <--- Reemplaza con el ID real de Sprite en la tabla 'productos'
+                  _cantidades[1] ?? 1,
                 );
               },
             ),
 
-            // Producto 3
+            // Producto 3 (Cambia el '3' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 2,
               nombre: 'Fanta Naranja',
@@ -137,16 +137,15 @@ class _CocaColaScreenState extends State<CocaColaScreen> {
               cantidad: _cantidades[2] ?? 1,
               onCantidadChanged: _cambiarCantidad,
               onAgregarAlCarrito: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('¡Fanta Naranja 3 L agregada al carrito! (${_cantidades[2]} und)'),
-                    backgroundColor: Colors.green,
-                  ),
+                manejarAgregarAlCarrito(
+                  context,
+                  3, // <--- Reemplaza con el ID real de Fanta Naranja en la tabla 'productos'
+                  _cantidades[2] ?? 1,
                 );
               },
             ),
 
-            // Producto 4
+            // Producto 4 (Cambia el '4' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 3,
               nombre: 'Quatro Toronja',
@@ -156,11 +155,10 @@ class _CocaColaScreenState extends State<CocaColaScreen> {
               cantidad: _cantidades[3] ?? 1,
               onCantidadChanged: _cambiarCantidad,
               onAgregarAlCarrito: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('¡Quatro Toronja 1.5 L agregada al carrito! (${_cantidades[3]} und)'),
-                    backgroundColor: Colors.green,
-                  ),
+                manejarAgregarAlCarrito(
+                  context,
+                  4, // <--- Reemplaza con el ID real de Quatro Toronja en la tabla 'productos'
+                  _cantidades[3] ?? 1,
                 );
               },
             ),

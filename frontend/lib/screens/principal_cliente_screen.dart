@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/cart_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
 import 'package:frontend/widgets/app_drawer.dart';
+import 'package:frontend/widgets/home_footer_contacts.dart' hide AppDrawer;
 import 'package:frontend/widgets/home_widgets.dart';
 
 class PrincipalClienteScreen extends StatelessWidget {
@@ -48,11 +50,16 @@ class PrincipalClienteScreen extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CartScreen()),
+              );
+            },
             icon: const Icon(
               Icons.shopping_cart_outlined,
               color: Colors.white,
-              size: 24,
+              size: 26,
             ),
           ),
           IconButton(
@@ -170,7 +177,7 @@ class PrincipalClienteScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const HomeFooterContacts(),
+      bottomNavigationBar: const HomeFooterContacts(isAdmin: false),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_chat_home_cliente',
         backgroundColor: const Color(0xFF00A8FF),

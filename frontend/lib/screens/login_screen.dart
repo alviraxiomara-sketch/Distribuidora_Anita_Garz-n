@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/principal_admin_screen.dart';
 import 'package:frontend/screens/principal_cliente_screen.dart';
 import 'package:frontend/screens/recuperar_password_screen.dart';
 import 'package:frontend/screens/register_screen.dart';
@@ -32,6 +33,26 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto), backgroundColor: color));
   }
 
+  // Método para redirigir dinámicamente según el rol devuelto por el backend
+  void _redirigirSegunRol(Map<String, dynamic> respuesta) {
+    final usuario = respuesta['usuario'] ?? {};
+    final rol = (usuario['rol'] ?? '').toString().toUpperCase();
+
+    Widget pantallaDestino;
+    if (rol == 'ADMIN') {
+      pantallaDestino = const PrincipalAdminScreen();
+    } else {
+      pantallaDestino = const PrincipalClienteScreen();
+    }
+
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => pantallaDestino),
+      (route) => false,
+    );
+  }
+
   Future<void> _handleLogin() async {
     final correo = _correoController.text.trim();
     final password = _passwordController.text.trim();
@@ -41,13 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _cargando = true);
     try {
       final respuesta = await _authService.login(correo: correo, password: password);
-      _msg(respuesta['mensaje'] ?? '¡Bienvenido!', Colors.green);
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const PrincipalClienteScreen()),
-        (route) => false,
-      );
+      _msg(respuesta['mensaje'] ?? '¡Bienvenido!', const Color.fromARGB(255, 72, 180, 230));
+      _redirigirSegunRol(respuesta);
     } catch (e) {
       _msg(e.toString().replaceAll('Exception: ', ''), Colors.red);
     } finally {
@@ -59,13 +75,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _cargando = true);
     try {
       final respuesta = await _authService.loginConGoogle();
-      _msg(respuesta['mensaje'] ?? '¡Bienvenido con Google!', Colors.blue);
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const PrincipalClienteScreen()),
-        (route) => false,
-      );
+      _msg(respuesta['mensaje'] ?? '¡Bienvenido con Google!', const Color.fromARGB(255, 72, 180, 230));
+      _redirigirSegunRol(respuesta);
     } catch (e) {
       final mensaje = e.toString().replaceAll('Exception: ', '');
       if (!mensaje.contains('cancelado')) _msg(mensaje, Colors.red);

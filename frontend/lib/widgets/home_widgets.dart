@@ -41,7 +41,6 @@ class HomeHeaderBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Logo con doble anillo brillante
           Container(
             width: 95,
             height: 95,
@@ -82,7 +81,6 @@ class HomeHeaderBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 18),
-          // Textos de bienvenida mejor distribuidos
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,7 +114,7 @@ class HomeHeaderBanner extends StatelessWidget {
   }
 }
 
-// Tarjeta de categoría (por si se usa en otros apartados)
+// Tarjeta de categoría
 class CategoriaCard extends StatelessWidget {
   final CategoriaItem categoria;
 
@@ -160,90 +158,6 @@ class CategoriaCard extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// Pie de página con diseño flotante y elegante
-class HomeFooterContacts extends StatelessWidget {
-  const HomeFooterContacts({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF063B5D),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.only(top: 26, bottom: 36, left: 24, right: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.headset_mic_rounded, color: Color(0xFF00A8FF), size: 18),
-              SizedBox(width: 8),
-              Text(
-                'Servicios de Atención',
-                style: TextStyle(
-                  color: Color(0xFF00A8FF),
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Georgia',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF031A2E),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.phone, color: Color(0xFF00A8FF), size: 16),
-              ),
-              const SizedBox(width: 14),
-              const Text(
-                '322 732 8596',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF031A2E),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.location_on, color: Colors.redAccent, size: 16),
-              ),
-              const SizedBox(width: 14),
-              const Text(
-                'Calle 4 A Sur #16-05',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
