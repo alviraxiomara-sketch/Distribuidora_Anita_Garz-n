@@ -1,8 +1,65 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/ingresar_producto_screen.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/ingresar_producto.dart';
+import 'package:frontend/screens/notificaciones.dart';
+import 'package:frontend/services/api_config.dart';
 
-class AdminDrawer extends StatelessWidget {
+class AdminDrawer extends StatefulWidget {
   const AdminDrawer({super.key});
+
+  @override
+  State<AdminDrawer> createState() => _AdminDrawerState();
+}
+
+class _AdminDrawerState extends State<AdminDrawer> {
+  int _notificacionesPendientes = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _obtenerNotificacionesPendientes();
+  }
+
+  // Consulta al backend para contar cuántas notificaciones no han sido leídas
+  Future<void> _obtenerNotificacionesPendientes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        List<dynamic> lista = [];
+
+        if (decoded is List) {
+          lista = decoded;
+        } else if (decoded is Map && decoded['data'] is List) {
+          lista = decoded['data'];
+        }
+
+        // Filtra únicamente las notificaciones que no han sido leídas
+        final noLeidas = lista.where((item) {
+          final bool leido = item['leido'] ?? item['leida'] ?? false;
+          return !leido;
+        }).toList();
+
+        setState(() {
+          _notificacionesPendientes = noLeidas.length;
+        });
+      }
+    } catch (_) {
+      // Manejo silencioso en caso de error de red
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +211,7 @@ class AdminDrawer extends StatelessWidget {
             title: 'Agregar Producto',
             subtitle: 'Crear nuevo ítem',
             onTap: () {
-              Navigator.pop(context); 
+              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -164,21 +221,24 @@ class AdminDrawer extends StatelessWidget {
             },
           ),
 
+          // Opción Notificaciones con badge dinámico
           _buildAdminOption(
             context: context,
             icon: Icons.notifications_none_rounded,
             title: 'Notificaciones',
             subtitle: 'Alertas de pedidos y stock',
-            badgeCount: 3,
-            onTap: () {
+            // Muestra la cantidad solo si hay más de 0 no leídas
+            badgeCount: _notificacionesPendientes > 0 ? _notificacionesPendientes : null,
+            onTap: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Módulo de Notificaciones'),
-                  backgroundColor: Color(0xFF00A8FF),
-                  behavior: SnackBarBehavior.floating,
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NotificacionesScreen(),
                 ),
               );
+              // Al volver de la pantalla de notificaciones, se actualiza el contador
+              _obtenerNotificacionesPendientes();
             },
           ),
 
@@ -232,7 +292,8 @@ class AdminDrawer extends StatelessWidget {
             subtitle,
             style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 11),
           ),
-          trailing: badgeCount != null
+          // Si badgeCount es distinto de null y mayor a 0 muestra el círculo rojo, si no muestra la flecha
+          trailing: badgeCount != null && badgeCount > 0
               ? Container(
                   padding: const EdgeInsets.all(6),
                   decoration: const BoxDecoration(

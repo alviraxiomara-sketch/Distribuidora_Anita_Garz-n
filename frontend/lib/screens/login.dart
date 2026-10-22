@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/principal_admin_screen.dart';
-import 'package:frontend/screens/principal_cliente_screen.dart';
-import 'package:frontend/screens/recuperar_password_screen.dart';
-import 'package:frontend/screens/register_screen.dart';
+import 'package:frontend/screens/principal_admin.dart';
+import 'package:frontend/screens/principal_cliente.dart';
+import 'package:frontend/screens/recuperar_password.dart';
+import 'package:frontend/screens/register.dart';
 import 'package:frontend/services/auth_service.dart';
-import 'package:frontend/widgets/login_widgets.dart';
+import 'package:frontend/widgets/login.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

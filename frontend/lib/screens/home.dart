@@ -1,24 +1,79 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/login_screen.dart';
-import 'package:frontend/screens/principal_cliente_screen.dart';
+import 'package:http/http.dart' as http;
+import 'package:frontend/screens/login.dart';
+import 'package:frontend/screens/principal_cliente.dart';
+import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/home_footer_contacts.dart';
-import 'package:frontend/widgets/home_widgets.dart';
+import 'package:frontend/widgets/home.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  static const List<CategoriaItem> categorias = [
-    CategoriaItem(nombre: 'Gaseosas', imagenAsset: 'assets/images/gaseosa.jpg'),
-    CategoriaItem(nombre: 'Jugos', imagenAsset: 'assets/images/jugos.jpg'),
-    CategoriaItem(nombre: 'Cervezas', imagenAsset: 'assets/images/cerveza.jpg'),
-    CategoriaItem(nombre: 'Aguas', imagenAsset: 'assets/images/agua.jpg'),
-    CategoriaItem(nombre: 'Lácteos', imagenAsset: 'assets/images/yogurd.jpg'),
-    CategoriaItem(
-      nombre: 'Energizantes',
-      imagenAsset: 'assets/images/energizante.jpg',
-    ),
-  ];
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<dynamic> _categoriasList = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCategoriasDesdeBD();
+  }
+
+  Future<void> _cargarCategoriasDesdeBD() async {
+    try {
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/categorias'),
+        headers: ApiConfig.headers,
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        
+        List<dynamic> listaTemporal = [];
+        
+        // Interpreta tanto listas directas como objetos JSON contenedores
+        if (decoded is List) {
+          listaTemporal = decoded;
+        } else if (decoded is Map) {
+          if (decoded['data'] is List) {
+            listaTemporal = decoded['data'];
+          } else if (decoded['categorias'] is List) {
+            listaTemporal = decoded['categorias'];
+          } else {
+            for (var value in decoded.values) {
+              if (value is List) {
+                listaTemporal = value;
+                break;
+              }
+            }
+          }
+        }
+
+        setState(() {
+          _categoriasList = listaTemporal;
+          _isLoading = false;
+        });
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +110,10 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      drawer: const AppDrawer(categorias: categorias),
+      drawer: AppDrawer(
+        categorias: _categoriasList,
+        isLoading: _isLoading,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(

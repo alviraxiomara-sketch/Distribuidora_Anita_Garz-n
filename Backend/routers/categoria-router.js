@@ -11,17 +11,14 @@ const router = Router();
 // RUTAS PÚBLICAS / USUARIOS AUTENTICADOS
 // ==========================
 
-// Obtener todas las categorías
-
+// Obtener todas las categorías (Ahora es PÚBLICA)
 router.get(
     "/",
-    verificarToken,
-    listarCategorias
+    listarCategorias // <--- Quitamos "verificarToken," de aquí
 );
 
 
-// Obtener categoría por ID
-
+// Obtener categoría por ID (Esta la puedes dejar con token si deseas protegerla)
 router.get(
     "/:id",
     verificarToken,

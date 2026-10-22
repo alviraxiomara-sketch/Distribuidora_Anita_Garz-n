@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/login_screen.dart';
-import 'package:frontend/screens/principal_cliente_screen.dart';
-import 'package:frontend/screens/profile_screen.dart';
+import 'package:frontend/screens/login.dart';
+import 'package:frontend/screens/principal_cliente.dart';
+import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/carrito_service.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/cart_bottom_bar.dart';
-import 'package:frontend/widgets/cart_widgets.dart';
-import 'package:frontend/widgets/home_widgets.dart'; // Necesario para CategoriaItem
+import 'package:frontend/widgets/cart.dart';
+import 'package:frontend/widgets/home.dart'; // Necesario para CategoriaItem
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});

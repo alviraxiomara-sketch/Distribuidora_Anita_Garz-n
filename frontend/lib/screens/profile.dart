@@ -4,10 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' as img_picker;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
-import 'package:frontend/screens/home_screen.dart';
+import 'package:frontend/screens/home.dart';
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/services/auth_service.dart';
-import 'package:frontend/widgets/profile_widgets.dart';
+import 'package:frontend/widgets/profile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -134,8 +134,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _cerrarSesion() async {
-    await AuthService.logout();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      try {
+        await AuthService.logout();
+      } catch (_) {}
+    } catch (_) {}
+
     if (!mounted) return;
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),

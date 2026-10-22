@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/home_screen.dart';
+import 'package:frontend/screens/home.dart';
+import 'package:frontend/services/carrito_helper.dart'; // <--- IMPORTANTE: Importamos el helper
 import 'package:frontend/widgets/app_drawer.dart';
+import 'package:frontend/widgets/coca_cola.dart';
 import 'package:frontend/widgets/home_footer_contacts.dart';
-import 'package:frontend/widgets/home_widgets.dart';
-import 'package:frontend/widgets/coca_cola_widgets.dart';
-import 'package:frontend/screens/login_screen.dart'; 
+import 'package:frontend/widgets/home.dart';
 
-class HitProductsScreen extends StatefulWidget {
-  const HitProductsScreen({super.key});
+class CocaColaScreen extends StatefulWidget {
+  const CocaColaScreen({super.key});
 
   @override
-  State<HitProductsScreen> createState() => _HitProductsScreenState();
+  State<CocaColaScreen> createState() => _CocaColaScreenState();
 }
 
-class _HitProductsScreenState extends State<HitProductsScreen> {
-  // Estado para la cantidad de cada producto
+class _CocaColaScreenState extends State<CocaColaScreen> {
+  // Estado independiente para la cantidad de cada presentación (índices 0, 1, 2 y 3)
   final Map<int, int> _cantidades = {0: 1, 1: 1, 2: 1, 3: 1};
 
   static const List<CategoriaItem> categorias = [
@@ -34,18 +34,6 @@ class _HitProductsScreenState extends State<HitProductsScreen> {
         _cantidades[index] = nuevo;
       }
     });
-  }
-
-  // Método centralizado para mostrar un solo mensaje al agregar al carrito
-  void _mostrarMensajeCarrito() {
-    ScaffoldMessenger.of(context).clearSnackBars(); // Oculta mensajes previos
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Producto agregado al carrito'),
-        backgroundColor: Color.fromARGB(255, 72, 180, 230),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   @override
@@ -76,14 +64,7 @@ class _HitProductsScreenState extends State<HitProductsScreen> {
           ),
           // Icono de Perfil
           IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginScreen(),
-                ),
-              );
-            },
+            onPressed: () {},
             icon: const Icon(
               Icons.account_circle_outlined,
               color: Colors.white,
@@ -100,7 +81,7 @@ class _HitProductsScreenState extends State<HitProductsScreen> {
           children: [
             // Título de la pantalla
             const Text(
-              'Jugos Hit',
+              'Coca Cola',
               style: TextStyle(
                 fontFamily: 'Georgia',
                 fontSize: 24,
@@ -110,52 +91,76 @@ class _HitProductsScreenState extends State<HitProductsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Producto 1
+            // Producto 1 (Cambia el '1' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 0,
-              nombre: 'Hit de Mango',
-              precio: '\$15.000',
-              presentacion: 'Caja  de 1L',
-              imagenAsset: 'assets/images/hit_mango.jpg',
+              nombre: 'Coca Cola',
+              precio: '\$12.000',
+              presentacion: '1/2 L Plástico',
+              imagenAsset: 'assets/images/gaseosa.jpg',
               cantidad: _cantidades[0] ?? 1,
               onCantidadChanged: _cambiarCantidad,
-              onAgregarAlCarrito: _mostrarMensajeCarrito,
+              onAgregarAlCarrito: () {
+                manejarAgregarAlCarrito(
+                  context,
+                  1, // <--- Reemplaza con el ID real de Coca Cola en la tabla 'productos'
+                  _cantidades[0] ?? 1,
+                );
+              },
             ),
 
-            // Producto 2
+            // Producto 2 (Cambia el '2' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 1,
-              nombre: 'Hit de Mora ',
+              nombre: 'Sprite',
               precio: '\$15.000',
-              presentacion: 'Caja  de 1L',
-              imagenAsset: 'assets/images/hit_mora.jpg',
+              presentacion: '1.5 L Plástico',
+              imagenAsset: 'assets/images/sprite.jpg',
               cantidad: _cantidades[1] ?? 1,
               onCantidadChanged: _cambiarCantidad,
-              onAgregarAlCarrito: _mostrarMensajeCarrito,
+              onAgregarAlCarrito: () {
+                manejarAgregarAlCarrito(
+                  context,
+                  2, // <--- Reemplaza con el ID real de Sprite en la tabla 'productos'
+                  _cantidades[1] ?? 1,
+                );
+              },
             ),
 
-            // Producto 3
+            // Producto 3 (Cambia el '3' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 2,
-              nombre: 'Hit de Lulo 1L',
-              precio: '\$15.000',
-              presentacion: 'Caja  de 1L',
-              imagenAsset: 'assets/images/hit_lulo.jpg',
+              nombre: 'Fanta Naranja',
+              precio: '\$18.000',
+              presentacion: '3 L Plástico',
+              imagenAsset: 'assets/images/fanta.jpg',
               cantidad: _cantidades[2] ?? 1,
               onCantidadChanged: _cambiarCantidad,
-              onAgregarAlCarrito: _mostrarMensajeCarrito,
+              onAgregarAlCarrito: () {
+                manejarAgregarAlCarrito(
+                  context,
+                  3, // <--- Reemplaza con el ID real de Fanta Naranja en la tabla 'productos'
+                  _cantidades[2] ?? 1,
+                );
+              },
             ),
 
-            // Producto 4
+            // Producto 4 (Cambia el '4' por el id_producto real en tu BD)
             CocaColaProductCardItem(
               index: 3,
-              nombre: 'Hit Frutas Tropicales 1L',
-              precio: '\$15.000',
-              presentacion: 'Caja  de 1L',
-              imagenAsset: 'assets/images/hit_tropical.jpg',
+              nombre: 'Quatro Toronja',
+              precio: '\$18.000',
+              presentacion: '1.5 L Plástico',
+              imagenAsset: 'assets/images/Quatro.jpg',
               cantidad: _cantidades[3] ?? 1,
               onCantidadChanged: _cambiarCantidad,
-              onAgregarAlCarrito: _mostrarMensajeCarrito,
+              onAgregarAlCarrito: () {
+                manejarAgregarAlCarrito(
+                  context,
+                  4, // <--- Reemplaza con el ID real de Quatro Toronja en la tabla 'productos'
+                  _cantidades[3] ?? 1,
+                );
+              },
             ),
 
             const SizedBox(height: 30),

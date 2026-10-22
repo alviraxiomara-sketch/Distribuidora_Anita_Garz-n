@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/login_screen.dart';
+import 'package:frontend/screens/login.dart';
 import 'package:frontend/services/recover_service.dart';
-import 'package:frontend/widgets/login_widgets.dart';
+import 'package:frontend/widgets/login.dart';
 
 class CodigoPasswordScreen extends StatefulWidget {
   final String correoUsuario;

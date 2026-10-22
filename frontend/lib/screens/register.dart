@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart' as img_picker;
-import 'package:frontend/screens/login_screen.dart';
+import 'package:frontend/screens/login.dart';
 import 'package:frontend/services/auth_service.dart';
-import 'package:frontend/widgets/login_widgets.dart';
+import 'package:frontend/widgets/login.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

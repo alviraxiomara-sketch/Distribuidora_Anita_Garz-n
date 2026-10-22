@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Modelo de datos para las categorías
+// Modelo de datos para compatibilidad
 class CategoriaItem {
   final String nombre;
   final String imagenAsset;
@@ -11,7 +11,7 @@ class CategoriaItem {
   });
 }
 
-// Banner principal ultra moderno con bordes estilizados y sombras
+// Banner principal de la aplicación
 class HomeHeaderBanner extends StatelessWidget {
   const HomeHeaderBanner({super.key});
 
@@ -110,54 +110,6 @@ class HomeHeaderBanner extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// Tarjeta de categoría
-class CategoriaCard extends StatelessWidget {
-  final CategoriaItem categoria;
-
-  const CategoriaCard({super.key, required this.categoria});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF00A8FF), width: 2),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.asset(
-                categoria.imagenAsset,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFF063B5D),
-                  child: const Icon(
-                    Icons.local_drink,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          categoria.nombre,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }

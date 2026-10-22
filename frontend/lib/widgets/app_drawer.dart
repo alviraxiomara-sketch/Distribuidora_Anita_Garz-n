@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/gaseosas_screen.dart';
-import 'package:frontend/screens/jugos_screen.dart';
-import 'package:frontend/widgets/home_widgets.dart';
 
 class AppDrawer extends StatelessWidget {
-  final List<CategoriaItem> categorias;
+  final List<dynamic> categorias;
+  final bool isLoading;
 
   const AppDrawer({
-    super.key,
-    required this.categorias,
+    super.key, 
+    required this.categorias, 
+    this.isLoading = false,
   });
 
   @override
@@ -18,13 +17,9 @@ class AppDrawer extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // CABECERA: Logo de Distribuidora Anita
           DrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color(0xFF063B5D),
-            ),
+            decoration: const BoxDecoration(color: Color(0xFF063B5D)),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   decoration: BoxDecoration(
@@ -65,10 +60,7 @@ class AppDrawer extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(height: 10),
-
-          // TÍTULO SECCIÓN
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
             child: Text(
@@ -81,94 +73,81 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
           ),
-
-          // LISTADO DE CATEGORÍAS
-          ...categorias.map((cat) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF063B5D).withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: const Color(0xFF00A8FF).withOpacity(0.4),
-                    width: 1.2,
-                  ),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                  leading: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF00A8FF), width: 1.2),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.asset(
-                        cat.imagenAsset,
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.local_drink,
-                          color: Colors.black54,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    cat.nombre,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: Color(0xFF00A8FF),
-                    size: 14,
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-
-                    if (cat.nombre == 'Gaseosas') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CatalogoProductosScreen(),
-                        ),
-                      );
-                    } else if (cat.nombre == 'Jugos') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const JugosScreen(),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Categoría ${cat.nombre} próximamente disponible',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          backgroundColor: const Color(0xFF00A8FF),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
+          
+          // CASO 1: Está cargando
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.all(30.0),
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFF00A8FF)),
+              ),
+            )
+          
+          // CASO 2: Terminó de cargar pero está vacío
+          else if (categorias.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Center(
+                child: Text(
+                  'No hay categorías registradas',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ),
-            );
-          }),
+            )
+          
+          // CASO 3: Muestra las categorías reales
+          else
+            ...categorias.map((cat) {
+              String nombre = 'Sin nombre';
+              if (cat is Map) {
+                nombre = cat['nombre'] ?? cat['Nombre'] ?? 'Sin nombre';
+              } else {
+                try {
+                  nombre = (cat as dynamic).nombre;
+                } catch (_) {
+                  nombre = cat.toString();
+                }
+              }
 
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF063B5D).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFF00A8FF).withOpacity(0.4),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    title: Text(
+                      nombre,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Color(0xFF00A8FF),
+                      size: 14,
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Abriendo $nombre'),
+                          backgroundColor: const Color(0xFF00A8FF),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }),
           const SizedBox(height: 20),
         ],
       ),

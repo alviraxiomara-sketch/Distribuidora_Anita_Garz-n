@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/home_screen.dart';
-import 'package:frontend/screens/hit_products_screen.dart';
-import 'package:frontend/screens/login_screen.dart'; // <--- IMPORT DE LOGIN
+import 'package:frontend/screens/coca_cola.dart';
+import 'package:frontend/screens/home.dart';
 import 'package:frontend/widgets/app_drawer.dart';
+import 'package:frontend/widgets/catalogo.dart';
 import 'package:frontend/widgets/home_footer_contacts.dart';
-import 'package:frontend/widgets/home_widgets.dart';
-import 'package:frontend/widgets/jugos_widgets.dart';
+import 'package:frontend/widgets/home.dart';
 
-class JugosScreen extends StatelessWidget {
-  const JugosScreen({super.key});
+class CatalogoProductosScreen extends StatelessWidget {
+  const CatalogoProductosScreen({super.key});
 
   static const List<CategoriaItem> categorias = [
     CategoriaItem(nombre: 'Gaseosas', imagenAsset: 'assets/images/gaseosa.jpg'),
@@ -28,6 +27,7 @@ class JugosScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // Icono de Casa para volver a la pantalla principal
           IconButton(
             onPressed: () {
               Navigator.pushAndRemoveUntil(
@@ -44,16 +44,9 @@ class JugosScreen extends StatelessWidget {
               size: 26,
             ),
           ),
-          // ICONO DE PERSONA CONECTADO A LOGIN
+          // Icono de Perfil
           IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginScreen(),
-                ),
-              );
-            },
+            onPressed: () {},
             icon: const Icon(
               Icons.account_circle_outlined,
               color: Colors.white,
@@ -69,7 +62,7 @@ class JugosScreen extends StatelessWidget {
         child: Column(
           children: [
             const Text(
-              'Jugos',
+              'Gaseosas',
               style: TextStyle(
                 fontFamily: 'Georgia',
                 fontSize: 24,
@@ -77,32 +70,33 @@ class JugosScreen extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
-            JugoCategoryCard(
-              nombre: 'Hit De Caja',
-              imagenAsset: 'assets/images/logo_hit.jpg',
+            // Tarjeta Coca Cola conectada a CocaColaScreen
+            ProductCardItem(
+              nombre: 'Coca Cola',
+              imagenAsset: 'assets/images/logo_coca_cola.png',
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const HitProductsScreen(),
+                    builder: (context) => const CocaColaScreen(),
                   ),
                 );
               },
             ),
-            const SizedBox(height: 16),
 
-            JugoCategoryCard(
-              nombre: 'cifrut',
-              imagenAsset: 'assets/images/logo_cifrut.jpg',
+            // Tarjeta Pepsi
+            ProductCardItem(
+              nombre: 'Pepsi',
+              imagenAsset: 'assets/images/logo_pepsi2.jpg',
               onTap: () {},
             ),
-            const SizedBox(height: 16),
 
-            JugoCategoryCard(
-              nombre: 'Tuti Fruti',
-              imagenAsset: 'assets/images/logo_tutti_frutti.jpg',
+            // Tarjeta Postobón
+            ProductCardItem(
+              nombre: 'Postobón',
+              imagenAsset: 'assets/images/logo_postobon.jpg',
               onTap: () {},
             ),
 

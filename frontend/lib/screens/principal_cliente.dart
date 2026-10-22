@@ -1,27 +1,53 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/cart_screen.dart';
-import 'package:frontend/screens/profile_screen.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/cart.dart';
+import 'package:frontend/screens/profile.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
+import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/home_footer_contacts.dart' hide AppDrawer;
-import 'package:frontend/widgets/home_widgets.dart';
+import 'package:frontend/widgets/home.dart';
 
-class PrincipalClienteScreen extends StatelessWidget {
+class PrincipalClienteScreen extends StatefulWidget {
   const PrincipalClienteScreen({super.key});
 
-  static const List<CategoriaItem> categorias = [
-    CategoriaItem(nombre: 'Gaseosas', imagenAsset: 'assets/images/gaseosa.jpg'),
-    CategoriaItem(nombre: 'Jugos', imagenAsset: 'assets/images/jugos.jpg'),
-    CategoriaItem(nombre: 'Cervezas', imagenAsset: 'assets/images/cerveza.jpg'),
-    CategoriaItem(nombre: 'Aguas', imagenAsset: 'assets/images/agua.jpg'),
-    CategoriaItem(nombre: 'Lácteos', imagenAsset: 'assets/images/yogurd.jpg'),
-    CategoriaItem(
-      nombre: 'Energizantes',
-      imagenAsset: 'assets/images/energizante.jpg',
-    ),
-  ];
+  @override
+  State<PrincipalClienteScreen> createState() => _PrincipalClienteScreenState();
+}
 
-  void _abrirChatDistribuidora(BuildContext context) {
+class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
+  List<dynamic> _categoriasList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCategorias();
+  }
+
+  Future<void> _cargarCategorias() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/categorias'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        setState(() {
+          _categoriasList = decoded is List ? decoded : [];
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _abrirChat(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -37,48 +63,30 @@ class PrincipalClienteScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ), // Habilita el icono del menú hamburguesa
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(
-              Icons.notifications_none,
-              color: Colors.white,
-              size: 24,
-            ),
+            icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
           ),
           IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const CartScreen()),
-              );
-            },
-            icon: const Icon(
-              Icons.shopping_cart_outlined,
-              color: Colors.white,
-              size: 26,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CartScreen()),
             ),
+            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 26),
           ),
           IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
-            icon: const Icon(
-              Icons.account_circle_outlined,
-              color: Colors.white,
-              size: 26,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
+            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 8),
         ],
       ),
-      drawer: const AppDrawer(categorias: categorias),
+      drawer: AppDrawer(categorias: _categoriasList),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
@@ -86,31 +94,21 @@ class PrincipalClienteScreen extends StatelessWidget {
             const SizedBox(height: 30),
             const HomeHeaderBanner(),
             const SizedBox(height: 30),
-
-            // Tarjeta de aviso estilizada
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
               decoration: BoxDecoration(
                 color: const Color(0xFF063B5D).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF00A8FF).withOpacity(0.5),
-                  width: 1,
-                ),
+                border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.5)),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.local_shipping_rounded,
-                    color: Color(0xFF00A8FF),
-                    size: 22,
-                  ),
+                  Icon(Icons.local_shipping_rounded, color: Color(0xFF00A8FF), size: 22),
                   SizedBox(width: 12),
                   Text(
                     '¡Estamos listos para atenderte!',
-                    textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
                       fontStyle: FontStyle.italic,
@@ -121,10 +119,7 @@ class PrincipalClienteScreen extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 30),
-
-            // SECCIÓN CENTRAL: Destacados / Beneficios (Igual a HomeScreen)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -135,9 +130,7 @@ class PrincipalClienteScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF00A8FF).withOpacity(0.5),
-                ),
+                border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,27 +145,14 @@ class PrincipalClienteScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildBenefitRow(
-                    Icons.speed_rounded,
-                    'Entregas Rápidas',
-                    'Despachos oportunos para tu negocio o evento.',
-                  ),
+                  _buildBenefitRow(Icons.speed_rounded, 'Entregas Rápidas', 'Despachos oportunos para tu negocio o evento.'),
                   const SizedBox(height: 14),
-                  _buildBenefitRow(
-                    Icons.inventory_2_outlined,
-                    'Variedad Garantizada',
-                    'Amplio catálogo en gaseosas, cervezas, jugos y más.',
-                  ),
+                  _buildBenefitRow(Icons.inventory_2_outlined, 'Variedad Garantizada', 'Amplio catálogo en gaseosas, cervezas, jugos y más.'),
                   const SizedBox(height: 14),
-                  _buildBenefitRow(
-                    Icons.verified_outlined,
-                    'Precios Especiales',
-                    'Atención directa y las mejores tarifas de distribución.',
-                  ),
+                  _buildBenefitRow(Icons.verified_outlined, 'Precios Especiales', 'Atención directa y las mejores tarifas de distribución.'),
                 ],
               ),
             ),
-
             const SizedBox(height: 30),
           ],
         ),
@@ -183,15 +163,14 @@ class PrincipalClienteScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF00A8FF),
         elevation: 8,
         shape: const CircleBorder(),
-        onPressed: () => _abrirChatDistribuidora(context),
+        onPressed: () => _abrirChat(context),
         child: ClipOval(
           child: Image.asset(
             'assets/images/robot.jpg',
             width: 52,
             height: 52,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
-                const Icon(Icons.smart_toy, color: Colors.white, size: 28),
+            errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy, color: Colors.white, size: 28),
           ),
         ),
       ),
@@ -216,19 +195,9 @@ class PrincipalClienteScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
+              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
+              Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ),
         ),
