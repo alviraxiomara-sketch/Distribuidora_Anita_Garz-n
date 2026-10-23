@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/ingresar_producto.dart';
+import 'package:frontend/screens/inventario.dart'; // <--- 1. Asegúrate de importar la pantalla de Inventario
 import 'package:frontend/screens/notificaciones.dart';
+import 'package:frontend/screens/stock.dart';
 import 'package:frontend/services/api_config.dart';
 
 class AdminDrawer extends StatefulWidget {
@@ -171,23 +173,24 @@ class _AdminDrawerState extends State<AdminDrawer> {
             ),
           ),
 
+          // 2. Opción Inventario conectada a InventarioScreen
           _buildAdminOption(
             context: context,
             icon: Icons.inventory_2_outlined,
             title: 'Inventario',
             subtitle: 'Catálogo de productos',
             onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Módulo de Inventario'),
-                  backgroundColor: Color(0xFF00A8FF),
-                  behavior: SnackBarBehavior.floating,
+              Navigator.pop(context); // Cierra el Drawer
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const InventarioScreen(),
                 ),
               );
             },
           ),
 
+          // Opción Control de Stock conectada a ControlStockScreen
           _buildAdminOption(
             context: context,
             icon: Icons.numbers_rounded,
@@ -195,11 +198,10 @@ class _AdminDrawerState extends State<AdminDrawer> {
             subtitle: 'Existencias y cantidades',
             onTap: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Módulo de Control de Stock'),
-                  backgroundColor: Color(0xFF00A8FF),
-                  behavior: SnackBarBehavior.floating,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ControlStockScreen(),
                 ),
               );
             },
@@ -227,7 +229,6 @@ class _AdminDrawerState extends State<AdminDrawer> {
             icon: Icons.notifications_none_rounded,
             title: 'Notificaciones',
             subtitle: 'Alertas de pedidos y stock',
-            // Muestra la cantidad solo si hay más de 0 no leídas
             badgeCount: _notificacionesPendientes > 0 ? _notificacionesPendientes : null,
             onTap: () async {
               Navigator.pop(context);
@@ -237,7 +238,6 @@ class _AdminDrawerState extends State<AdminDrawer> {
                   builder: (_) => const NotificacionesScreen(),
                 ),
               );
-              // Al volver de la pantalla de notificaciones, se actualiza el contador
               _obtenerNotificacionesPendientes();
             },
           ),
@@ -292,7 +292,6 @@ class _AdminDrawerState extends State<AdminDrawer> {
             subtitle,
             style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 11),
           ),
-          // Si badgeCount es distinto de null y mayor a 0 muestra el círculo rojo, si no muestra la flecha
           trailing: badgeCount != null && badgeCount > 0
               ? Container(
                   padding: const EdgeInsets.all(6),

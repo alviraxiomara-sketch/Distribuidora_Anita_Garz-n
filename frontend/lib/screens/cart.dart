@@ -1,12 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/login.dart';
 import 'package:frontend/screens/principal_cliente.dart';
 import 'package:frontend/screens/profile.dart';
+import 'package:frontend/services/api_config.dart';
 import 'package:frontend/services/carrito_service.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/cart_bottom_bar.dart';
 import 'package:frontend/widgets/cart.dart';
-import 'package:frontend/widgets/home.dart'; // Necesario para CategoriaItem
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -18,24 +21,34 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   bool _cargando = true;
   List<dynamic> _detallesCarrito = [];
-
-  // Lista de categorías para que el menú lateral (AppDrawer) muestre las opciones correctamente
-  static const List<CategoriaItem> categorias = [
-    CategoriaItem(nombre: 'Gaseosas', imagenAsset: 'assets/images/gaseosa.jpg'),
-    CategoriaItem(nombre: 'Jugos', imagenAsset: 'assets/images/jugos.jpg'),
-    CategoriaItem(nombre: 'Cervezas', imagenAsset: 'assets/images/cerveza.jpg'),
-    CategoriaItem(nombre: 'Aguas', imagenAsset: 'assets/images/agua.jpg'),
-    CategoriaItem(nombre: 'Lácteos', imagenAsset: 'assets/images/yogurd.jpg'),
-    CategoriaItem(
-      nombre: 'Energizantes',
-      imagenAsset: 'assets/images/energizante.jpg',
-    ),
-  ];
+  List<dynamic> _categoriasList = []; // <--- Variable declarada correctamente
 
   @override
   void initState() {
     super.initState();
     _cargarCarrito();
+    _cargarCategorias(); // <--- Método para cargar las categorías al iniciar
+  }
+
+  Future<void> _cargarCategorias() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/categorias'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        setState(() {
+          _categoriasList = decoded is List ? decoded : [];
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _cargarCarrito() async {
@@ -141,8 +154,7 @@ class _CartScreenState extends State<CartScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      // Pasamos la lista de categorías para que el menú lateral se cargue completo
-      drawer: const AppDrawer(categorias: categorias),
+      drawer: AppDrawer(categorias: _categoriasList),
       body: _cargando
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF00A8FF)),

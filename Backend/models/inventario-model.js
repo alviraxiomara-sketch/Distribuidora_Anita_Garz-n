@@ -109,6 +109,30 @@ export const actualizarStock = async (
 
 
 // ==========================
+// ACTUALIZAR INVENTARIO POR PRODUCTO (NUEVO)
+// ==========================
+
+export const actualizarInventarioPorProducto = async (
+    id_producto,
+    datos
+) => {
+
+    const { data, error } =
+        await supabase
+            .from("inventario")
+            .update({
+                ...datos,
+                updated_at: new Date()
+            })
+            .eq("id_producto", id_producto)
+            .select()
+            .maybeSingle();
+
+    return { data, error };
+};
+
+
+// ==========================
 // ACTUALIZAR STOCK MÍNIMO
 // ==========================
 

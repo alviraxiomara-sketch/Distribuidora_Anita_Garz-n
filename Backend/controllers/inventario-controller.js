@@ -133,7 +133,7 @@ export const crear = async (req, res) => {
                 stock_actual ?? 0,
 
             stock_minimo:
-                stock_minimo ?? 5
+                stock_minimo ?? 20 // <--- Stock mínimo predeterminado cambiado a 20
 
         };
 

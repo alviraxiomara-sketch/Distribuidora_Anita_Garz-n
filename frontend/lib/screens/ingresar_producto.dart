@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/principal_admin.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';
-import 'package:frontend/widgets/admin_drawer.dart'; // <--- Importado el AdminDrawer
+import 'package:frontend/widgets/admin_drawer.dart';
 import 'package:frontend/widgets/ingresar_producto.dart';
 import 'package:frontend/widgets/producto_ingresar_form_state.dart';
 
@@ -18,7 +18,6 @@ class IngresarProductoScreen extends StatefulWidget {
 }
 
 class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
-  // Clave para controlar la apertura del menú lateral (Drawer)
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final _nombreController = TextEditingController();
@@ -146,21 +145,15 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFF031A2E),
-      
-      // Menú lateral del Administrador
       drawer: const AdminDrawer(),
-
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
-        automaticallyImplyLeading: false, // Oculta la flecha por defecto
-        
-        // Ancho y distribución de los botones izquierdos (menú hamburguesa + casita)
-        leadingWidth: 110,
+        automaticallyImplyLeading: false,
+        leadingWidth: 130, // <--- Ancho ampliado para evitar el overflow
         leading: Row(
           children: [
-            const SizedBox(width: 8),
-            // 1. Botón de Menú Hamburguesa para abrir el Drawer
+            const SizedBox(width: 12),
             IconButton(
               icon: const Icon(Icons.menu, color: Colors.white, size: 24),
               padding: EdgeInsets.zero,
@@ -169,8 +162,7 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
                 _scaffoldKey.currentState?.openDrawer();
               },
             ),
-            const SizedBox(width: 16), // Espaciado entre la hamburguesa y la casita
-            // 2. Botón de la Casita para regresar al panel de administrador
+            const SizedBox(width: 16),
             IconButton(
               icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
               padding: EdgeInsets.zero,
@@ -184,7 +176,6 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
           ],
         ),
         actions: [
-          // Botón de Perfil
           IconButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
             icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),

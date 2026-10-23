@@ -109,8 +109,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
-        // Ancho ampliado para alojar ambos botones con su debida separación
-        leadingWidth: 110,
+        // Ancho ampliado a 130 para alojar ambos botones holgadamente y evitar el overflow
+        leadingWidth: 130,
         leading: Row(
           children: [
             const SizedBox(width: 8),
