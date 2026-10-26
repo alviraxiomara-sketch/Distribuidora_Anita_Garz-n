@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/cervezas_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final List<dynamic> categorias;
@@ -74,7 +75,6 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
           
-          // CASO 1: Está cargando
           if (isLoading)
             const Padding(
               padding: EdgeInsets.all(30.0),
@@ -82,8 +82,6 @@ class AppDrawer extends StatelessWidget {
                 child: CircularProgressIndicator(color: Color(0xFF00A8FF)),
               ),
             )
-          
-          // CASO 2: Terminó de cargar pero está vacío
           else if (categorias.isEmpty)
             const Padding(
               padding: EdgeInsets.all(20.0),
@@ -94,8 +92,6 @@ class AppDrawer extends StatelessWidget {
                 ),
               ),
             )
-          
-          // CASO 3: Muestra las categorías reales
           else
             ...categorias.map((cat) {
               String nombre = 'Sin nombre';
@@ -108,6 +104,8 @@ class AppDrawer extends StatelessWidget {
                   nombre = cat.toString();
                 }
               }
+
+              final nombreLimpio = nombre.trim().toLowerCase();
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
@@ -136,13 +134,23 @@ class AppDrawer extends StatelessWidget {
                       size: 14,
                     ),
                     onTap: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Abriendo $nombre'),
-                          backgroundColor: const Color(0xFF00A8FF),
-                        ),
-                      );
+                      Navigator.of(context).pop();
+
+                      if (nombreLimpio == 'cerveza' || nombreLimpio.contains('cerveza')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CervezasScreen(),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Abriendo $nombre'),
+                            backgroundColor: const Color(0xFF00A8FF),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),

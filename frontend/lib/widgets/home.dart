@@ -87,7 +87,7 @@ class HomeHeaderBanner extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Distribuciones De\nBebidas Anita',
+                  'Distribuciones\n Anita',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,

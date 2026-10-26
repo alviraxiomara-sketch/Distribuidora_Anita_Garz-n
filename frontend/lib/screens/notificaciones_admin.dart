@@ -8,14 +8,14 @@ import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/admin_drawer.dart';
 import 'package:frontend/widgets/notificaciones.dart';
 
-class NotificacionesScreen extends StatefulWidget {
-  const NotificacionesScreen({super.key});
+class NotificacionesAdmin extends StatefulWidget {
+  const NotificacionesAdmin({super.key});
 
   @override
-  State<NotificacionesScreen> createState() => _NotificacionesScreenState();
+  State<NotificacionesAdmin> createState() => _NotificacionesAdminState();
 }
 
-class _NotificacionesScreenState extends State<NotificacionesScreen> {
+class _NotificacionesAdminState extends State<NotificacionesAdmin> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<dynamic> _notificaciones = [];

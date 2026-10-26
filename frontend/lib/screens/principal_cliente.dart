@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/notificaciones_cliente.dart';
+import 'package:frontend/widgets/home_footer_contacts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/cart.dart';
+import 'package:frontend/screens/notificaciones_admin.dart'; // <--- 1. Importar la pantalla de notificaciones
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
-import 'package:frontend/widgets/home_footer_contacts.dart' hide AppDrawer;
 import 'package:frontend/widgets/home.dart';
 
 class PrincipalClienteScreen extends StatefulWidget {
@@ -65,8 +67,12 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // 2. Conectar el botón de la campana con NotificacionesScreen
           IconButton(
-            onPressed: () {},
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+            ),
             icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
           ),
           IconButton(

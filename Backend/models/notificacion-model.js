@@ -21,8 +21,7 @@ export const crearNotificacion = async (
 
 
 // ==========================
-// OBTENER NOTIFICACIONES
-// POR USUARIO
+// OBTENER NOTIFICACIONES POR USUARIO
 // ==========================
 
 export const obtenerNotificacionesUsuario =
@@ -49,7 +48,7 @@ async (id_usuario) => {
 
 
 // ==========================
-// OBTENER NOTIFICACIÓN
+// OBTENER NOTIFICACIÓN POR ID
 // ==========================
 
 export const obtenerNotificacionPorId =
@@ -95,8 +94,9 @@ export const marcarLeida = async (
 
 };
 
+
 // ==========================
-// ELIMINAR NOTIFICACIÓN
+// ELIMINAR NOTIFICACIÓN (Corregido con Number)
 // ==========================
 
 export const eliminarNotificacion = async (
@@ -109,10 +109,9 @@ export const eliminarNotificacion = async (
             .delete()
             .eq(
                 "id_notificacion",
-                id_notificacion
+                Number(id_notificacion)
             )
-            .select()
-            .single();
+            .select();
 
     return { data, error };
 

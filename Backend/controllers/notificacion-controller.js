@@ -70,8 +70,7 @@ async (req, res) => {
         if (!notificacion) {
 
             return res.status(404).json({
-                error:
-                "Notificación no encontrada"
+                error: "Notificación no encontrada"
             });
 
         }
@@ -87,8 +86,7 @@ async (req, res) => {
         ) {
 
             return res.status(403).json({
-                error:
-                "No tiene permiso"
+                error: "No tiene permiso"
             });
 
         }
@@ -101,17 +99,14 @@ async (req, res) => {
         if (errorUpdate) {
 
             return res.status(500).json({
-                error:
-                errorUpdate.message
+                error: errorUpdate.message
             });
 
         }
 
         return res.status(200).json({
 
-            mensaje:
-            "Notificación marcada como leída",
-
+            mensaje: "Notificación marcada como leída",
             notificacion: data
 
         });
@@ -126,8 +121,9 @@ async (req, res) => {
 
 };
 
+
 // ==========================
-// ELIMINAR NOTIFICACIÓN
+// ELIMINAR NOTIFICACIÓN (Corregido con Number)
 // ==========================
 
 export const eliminar =
@@ -157,8 +153,7 @@ async (req, res) => {
         if (!notificacion) {
 
             return res.status(404).json({
-                error:
-                "Notificación no encontrada"
+                error: "Notificación no encontrada"
             });
 
         }
@@ -174,8 +169,7 @@ async (req, res) => {
         ) {
 
             return res.status(403).json({
-                error:
-                "No tiene permiso"
+                error: "No tiene permiso"
             });
 
         }
@@ -183,22 +177,19 @@ async (req, res) => {
         const {
             data,
             error: errorDelete
-        } = await eliminarNotificacion(id);
+        } = await eliminarNotificacion(Number(id));
 
         if (errorDelete) {
 
             return res.status(500).json({
-                error:
-                errorDelete.message
+                error: errorDelete.message
             });
 
         }
 
         return res.status(200).json({
 
-            mensaje:
-            "Notificación eliminada correctamente",
-
+            mensaje: "Notificación eliminada correctamente",
             notificacion: data
 
         });

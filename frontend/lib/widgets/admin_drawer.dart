@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/ingresar_producto.dart';
 import 'package:frontend/screens/inventario.dart'; // <--- 1. Asegúrate de importar la pantalla de Inventario
-import 'package:frontend/screens/notificaciones.dart';
+import 'package:frontend/screens/notificaciones_admin.dart';
 import 'package:frontend/screens/stock.dart';
 import 'package:frontend/services/api_config.dart';
 
@@ -235,7 +235,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const NotificacionesScreen(),
+                  builder: (_) => const NotificacionesAdmin(),
                 ),
               );
               _obtenerNotificacionesPendientes();
