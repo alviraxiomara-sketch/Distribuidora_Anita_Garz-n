@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Colores del chat (tomados del diseño de Figma; ajusta el hex si hace falta).
+/// Colores unificados del chat con la paleta oscura de la aplicación.
 class ChatColors {
-  static const fondo = Color(0xFF06294B);
-  static const panel = Color(0xFF1B4F80);
-  static const borde = Color(0xFF2196F3);
-  static const celeste = Color(0xFF29B6F6);
-  static const burbujaBot = Color.fromARGB(255, 77, 133, 197);
-  static const burbujaUsuario = Color.fromARGB(255, 24, 79, 129);
+  static const fondo = Color(0xFF031A2E); // Coincide con el fondo general de tus pantallas
+  static const panel = Color(0xFF063B5D); // Coincide con el color de las barras y tarjetas
+  static const borde = Color(0xFF00A8FF); // Coincide con el azul brillante de bordes
+  static const celeste = Color(0xFF00A8FF);
+  static const burbujaBot = Color(0xFF063B5D);
+  static const burbujaUsuario = Color(0xFF0A4D73);
 }
 
 /// Avatar circular del asistente xiomy (usa assets/images/asistente.png).
@@ -24,7 +24,7 @@ class AsistenteAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: Colors.white,
         border: Border.all(
-          color: ChatColors.celeste,
+          color: const Color.fromRGBO(0, 168, 255, 1),
           width: radio >= 24 ? 3 : 1.5,
         ),
       ),

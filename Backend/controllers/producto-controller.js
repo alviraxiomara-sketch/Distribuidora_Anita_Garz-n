@@ -10,19 +10,20 @@ export const crear = async (req, res) => {
         const {
             id_categoria,
             nombre,
-            descripcion,
             presentacion,
+            tapa,
             precio_detal,
             precio_mayorista,
             cantidad_minima_mayorista,
-            cantidad
+            cantidad,
+            tipo
         } = req.body;
 
         const imagen_url = req.file ? req.file.path : null;
 
-        if (!id_categoria || !nombre || precio_detal === undefined || precio_detal === null) {
+        if (!id_categoria || !nombre || precio_detal === undefined || precio_detal === null || !tipo) {
             return res.status(400).json({
-                error: "Categoría, nombre y precio de venta al detal son obligatorios"
+                error: "Categoría, nombre, precio de venta al detal y tipo son obligatorios"
             });
         }
 
@@ -41,13 +42,14 @@ export const crear = async (req, res) => {
         const nuevoProducto = {
             id_categoria,
             nombre,
-            descripcion: descripcion || null,
             presentacion: presentacion || null,
+            tapa: tapa || null,
             precio_detal,
             precio_mayorista: precio_mayorista ?? null,
             imagen_url: imagen_url || null,
             activo: true,
-            cantidad_minima_mayorista: cantidad_minima_mayorista ?? null
+            cantidad_minima_mayorista: cantidad_minima_mayorista ?? null,
+            tipo
         };
 
         const { data: productoCreado, error: errorProducto } = await crearProducto(nuevoProducto);
@@ -86,10 +88,18 @@ export const crear = async (req, res) => {
 
 export const listarProductos = async (req, res) => {
     try {
+        const { tipo } = req.query;
         const { data, error } = await obtenerProductos();
+        
         if (error) {
             return res.status(500).json({ error: error.message });
         }
+
+        if (tipo) {
+            const productosFiltrados = data.filter(p => p.tipo && p.tipo.toLowerCase() === tipo.toLowerCase());
+            return res.status(200).json(productosFiltrados);
+        }
+
         return res.status(200).json(data);
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -162,7 +172,7 @@ export const buscar = async (req, res) => {
 };
 
 // ==========================
-// ACTUALIZAR PRODUCTO (Soporta Imagen y Stock)
+// ACTUALIZAR PRODUCTO
 // ==========================
 
 export const actualizar = async (req, res) => {
@@ -172,19 +182,20 @@ export const actualizar = async (req, res) => {
         const {
             id_categoria,
             nombre,
-            descripcion,
             presentacion,
+            tapa,
             precio_detal,
             precio_mayorista,
             cantidad_minima_mayorista,
-            stock_actual
+            stock_actual,
+            tipo
         } = req.body;
         
         const imagen_url = req.file ? req.file.path : null;
 
-        if (!id_categoria || !nombre || precio_detal === undefined || precio_detal === null) {
+        if (!id_categoria || !nombre || precio_detal === undefined || precio_detal === null || !tipo) {
             return res.status(400).json({
-                error: "Categoría, nombre y precio al detal son obligatorios"
+                error: "Categoría, nombre, precio al detal y tipo son obligatorios"
             });
         }
 
@@ -203,11 +214,12 @@ export const actualizar = async (req, res) => {
         const datosActualizados = {
             id_categoria,
             nombre,
-            descripcion: descripcion || null,
             presentacion: presentacion || null,
+            tapa: tapa || null,
             precio_detal,
             precio_mayorista: precio_mayorista || null,
             cantidad_minima_mayorista: cantidad_minima_mayorista || null,
+            tipo,
             updated_at: new Date()
         };
 

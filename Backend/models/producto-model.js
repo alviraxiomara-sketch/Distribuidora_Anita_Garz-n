@@ -31,6 +31,8 @@ export const obtenerProductos = async () => {
                 id_categoria,
                 nombre,
                 presentacion,
+                tapa,
+                tipo,
                 precio_detal,
                 precio_mayorista,
                 imagen_url,
@@ -65,6 +67,8 @@ export const obtenerProductoPorId = async (id_producto) => {
                 id_categoria,
                 nombre,
                 presentacion,
+                tapa,
+                tipo,
                 precio_detal,
                 precio_mayorista,
                 imagen_url,
@@ -98,6 +102,8 @@ export const obtenerProductosPorCategoria = async (id_categoria) => {
                 id_categoria,
                 nombre,
                 presentacion,
+                tapa,
+                tipo,
                 precio_detal,
                 precio_mayorista,
                 imagen_url,
@@ -129,6 +135,8 @@ export const buscarProductosPorNombre = async (nombre) => {
                 id_categoria,
                 nombre,
                 presentacion,
+                tapa,
+                tipo,
                 precio_detal,
                 precio_mayorista,
                 imagen_url,
@@ -167,10 +175,10 @@ export const actualizarProducto = async (
 };
  
  
-    // ==========================
-    // DESACTIVAR PRODUCTO
-    // ==========================
-    export const desactivarProducto = async (id_producto) => {
+// ==========================
+// DESACTIVAR PRODUCTO
+// ==========================
+export const desactivarProducto = async (id_producto) => {
  
     const { data, error } =
         await supabase
@@ -187,10 +195,10 @@ export const actualizarProducto = async (
 };
  
  
-    // ==========================
-    // ACTIVAR PRODUCTO
-    // ==========================
-    export const activarProducto = async (id_producto) => {
+// ==========================
+// ACTIVAR PRODUCTO
+// ==========================
+export const activarProducto = async (id_producto) => {
  
     const { data, error } =
         await supabase

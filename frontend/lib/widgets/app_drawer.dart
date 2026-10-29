@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/cervezas_screen.dart';
+import 'package:frontend/screens/tipos.dart'; // <--- Asegúrate de importar la pantalla Tipos
 
 class AppDrawer extends StatelessWidget {
   final List<dynamic> categorias;
@@ -75,7 +75,7 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
           
-          if (isLoading)
+          if (isLoading == true)
             const Padding(
               padding: EdgeInsets.all(30.0),
               child: Center(
@@ -105,8 +105,6 @@ class AppDrawer extends StatelessWidget {
                 }
               }
 
-              final nombreLimpio = nombre.trim().toLowerCase();
-
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
                 child: Container(
@@ -134,23 +132,16 @@ class AppDrawer extends StatelessWidget {
                       size: 14,
                     ),
                     onTap: () {
+                      // 1. Cierra el menú lateral
                       Navigator.of(context).pop();
 
-                      if (nombreLimpio == 'cerveza' || nombreLimpio.contains('cerveza')) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CervezasScreen(),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Abriendo $nombre'),
-                            backgroundColor: const Color(0xFF00A8FF),
-                          ),
-                        );
-                      }
+                      // 2. Navega correctamente a la pantalla TiposScreen pasando la categoría
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TiposScreen(categoria: nombre),
+                        ),
+                      );
                     },
                   ),
                 ),

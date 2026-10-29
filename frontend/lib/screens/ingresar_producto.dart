@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' as img_picker;
@@ -38,6 +40,7 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
   
   int? _categoriaSeleccionadaId;
   int? _tipoSeleccionadoId;
+  String? _tapaSeleccionada; // <--- Variable para almacenar el color de la tapa independiente
 
   @override
   void initState() {
@@ -175,13 +178,28 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
       request.fields['precio_detal'] = valor;
       request.fields['precio_mayorista'] = _precioMayoristaController.text.trim().isEmpty ? '0' : _precioMayoristaController.text.trim();
       request.fields['presentacion'] = _presentacionController.text.trim();
+      
+      // ENVIAR EL COLOR DE LA TAPA SEPARADO
+      request.fields['tapa'] = _tapaSeleccionada ?? ''; 
+      
       request.fields['cantidad'] = _cantidadController.text.trim().isEmpty ? '0' : _cantidadController.text.trim();
       request.fields['cantidad_minima_mayorista'] = _cantidadMinimaMayoristaController.text.trim().isEmpty ? '0' : _cantidadMinimaMayoristaController.text.trim();
       request.fields['id_categoria'] = _categoriaSeleccionadaId.toString();
-      request.fields['id_tipo'] = _tipoSeleccionadoId.toString();
+      
+      // Buscar el nombre del tipo seleccionado (o enviar su ID/texto según requiera el backend)
+      final tipoEncontrado = _tiposList.firstWhere(
+        (t) => (int.tryParse((t['id_tipo'] ?? t['id'])?.toString() ?? '0') ?? 0) == _tipoSeleccionadoId,
+        orElse: () => {'nombre': 'Nacionales'},
+      );
+      request.fields['tipo'] = tipoEncontrado['nombre'] ?? 'Nacionales';
 
       if (_imagenProducto != null) {
-        request.files.add(await http.MultipartFile.fromPath('imagen', _imagenProducto!.path));
+        if (kIsWeb) {
+          var bytes = await _imagenProducto!.readAsBytes();
+          request.files.add(http.MultipartFile.fromBytes('imagen', bytes, filename: _imagenProducto!.name));
+        } else {
+          request.files.add(await http.MultipartFile.fromPath('imagen', _imagenProducto!.path));
+        }
       }
 
       var streamedResponse = await request.send();
@@ -202,9 +220,13 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
           _imagenProducto = null;
           _categoriaSeleccionadaId = null;
           _tipoSeleccionadoId = null;
+          _tapaSeleccionada = null;
         });
       } else {
-        throw Exception('Error en el servidor');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error del servidor: ${response.body}'), backgroundColor: Colors.red),
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -263,6 +285,11 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
             presentacionController: _presentacionController,
             cantidadController: _cantidadController,
             cantidadMinimaMayoristaController: _cantidadMinimaMayoristaController,
+            
+            // CONEXIÓN DE LA TAPA
+            tapaSeleccionada: _tapaSeleccionada,
+            onChangedTapa: (val) => setState(() => _tapaSeleccionada = val),
+
             imagenProducto: _imagenProducto,
             onTapImagen: () async {
               final img = await _picker.pickImage(source: img_picker.ImageSource.gallery, maxWidth: 600, maxHeight: 600, imageQuality: 50);
