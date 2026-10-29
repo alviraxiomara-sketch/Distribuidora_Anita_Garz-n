@@ -6,9 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/principal_admin.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';
-import 'package:frontend/widgets/admin_drawer.dart';
-import 'package:frontend/widgets/ingresar_producto.dart';
-import 'package:frontend/widgets/producto_ingresar_form_state.dart';
+import 'package:frontend/widgets/app_drawer.dart';
+import 'package:frontend/widgets/producto_ingresar_form.dart';
 
 class IngresarProductoScreen extends StatefulWidget {
   const IngresarProductoScreen({super.key});
@@ -26,20 +25,25 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
   final _presentacionController = TextEditingController();
   final _cantidadController = TextEditingController();
   final _cantidadMinimaMayoristaController = TextEditingController();
-  final _descripcionController = TextEditingController();
 
   final img_picker.ImagePicker _picker = img_picker.ImagePicker();
   img_picker.XFile? _imagenProducto;
 
   bool _cargando = false;
   bool _cargandoCategorias = true;
+  bool _cargandoTipos = false;
+  
   List<dynamic> _categoriasList = [];
+  List<dynamic> _tiposList = [];
+  
   int? _categoriaSeleccionadaId;
+  int? _tipoSeleccionadoId;
 
   @override
   void initState() {
     super.initState();
     _cargarCategoriasDesdeBD();
+    _cargarTodosLosTipos();
   }
 
   @override
@@ -50,22 +54,21 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
     _presentacionController.dispose();
     _cantidadController.dispose();
     _cantidadMinimaMayoristaController.dispose();
-    _descripcionController.dispose();
     super.dispose();
   }
 
   Future<void> _cargarCategoriasDesdeBD() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/categorias'),
-        headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
-      );
+        headers: ApiConfig.headers,
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(response.body);
+        List<dynamic> lista = decoded is List ? decoded : (decoded['categorias'] ?? decoded['data'] ?? []);
         setState(() {
-          _categoriasList = jsonDecode(response.body);
+          _categoriasList = lista;
           _cargandoCategorias = false;
         });
       } else if (mounted) {
@@ -73,6 +76,35 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _cargandoCategorias = false);
+    }
+  }
+
+  Future<void> _cargarTodosLosTipos() async {
+    setState(() => _cargandoTipos = true);
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/tipos'),
+        headers: ApiConfig.headers,
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(response.body);
+        List<dynamic> lista = decoded is List ? decoded : (decoded['tipos'] ?? decoded['data'] ?? []);
+        setState(() {
+          _tiposList = lista;
+          _cargandoTipos = false;
+        });
+      } else {
+        setState(() {
+          _tiposList = [{'id': 1, 'nombre': 'Nacionales'}, {'id': 2, 'nombre': 'Importadas'}];
+          _cargandoTipos = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _tiposList = [{'id': 1, 'nombre': 'Nacionales'}, {'id': 2, 'nombre': 'Importadas'}];
+        _cargandoTipos = false;
+      });
     }
   }
 
@@ -120,24 +152,68 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
     );
   }
 
-  void _ejecutarGuardado() {
-    ProductoFormControllerHelper.guardarProducto(
-      context: context,
-      nombreController: _nombreController,
-      valorController: _valorController,
-      precioMayoristaController: _precioMayoristaController,
-      presentacionController: _presentacionController,
-      cantidadController: _cantidadController,
-      cantidadMinimaMayoristaController: _cantidadMinimaMayoristaController,
-      descripcionController: _descripcionController,
-      categoriaSeleccionadaId: _categoriaSeleccionadaId,
-      imagenProducto: _imagenProducto,
-      onCargando: (val) => setState(() => _cargando = val),
-      onExito: () => setState(() {
-        _imagenProducto = null;
-        _categoriaSeleccionadaId = null;
-      }),
-    );
+  Future<void> _ejecutarGuardado() async {
+    final nombre = _nombreController.text.trim();
+    final valor = _valorController.text.trim();
+
+    if (nombre.isEmpty || valor.isEmpty || _categoriaSeleccionadaId == null || _tipoSeleccionadoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor completa los campos obligatorios, categoría y tipo'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _cargando = true);
+
+    try {
+      final token = (await SharedPreferences.getInstance()).getString('token');
+      var request = http.MultipartRequest('POST', Uri.parse('${ApiConfig.baseUrl}/productos'));
+
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+
+      request.fields['nombre'] = nombre;
+      request.fields['precio_detal'] = valor;
+      request.fields['precio_mayorista'] = _precioMayoristaController.text.trim().isEmpty ? '0' : _precioMayoristaController.text.trim();
+      request.fields['presentacion'] = _presentacionController.text.trim();
+      request.fields['cantidad'] = _cantidadController.text.trim().isEmpty ? '0' : _cantidadController.text.trim();
+      request.fields['cantidad_minima_mayorista'] = _cantidadMinimaMayoristaController.text.trim().isEmpty ? '0' : _cantidadMinimaMayoristaController.text.trim();
+      request.fields['id_categoria'] = _categoriaSeleccionadaId.toString();
+      request.fields['id_tipo'] = _tipoSeleccionadoId.toString();
+
+      if (_imagenProducto != null) {
+        request.files.add(await http.MultipartFile.fromPath('imagen', _imagenProducto!.path));
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Producto guardado exitosamente'), backgroundColor: Colors.green),
+        );
+        _nombreController.clear();
+        _valorController.clear();
+        _precioMayoristaController.clear();
+        _presentacionController.clear();
+        _cantidadController.clear();
+        _cantidadMinimaMayoristaController.clear();
+        setState(() {
+          _imagenProducto = null;
+          _categoriaSeleccionadaId = null;
+          _tipoSeleccionadoId = null;
+        });
+      } else {
+        throw Exception('Error en el servidor');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al conectar con el servidor'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
   }
 
   @override
@@ -145,28 +221,22 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFF031A2E),
-      drawer: const AdminDrawer(),
+      drawer: AppDrawer(categorias: _categoriasList, isLoading: _cargandoCategorias),
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
         automaticallyImplyLeading: false,
-        leadingWidth: 130, // <--- Ancho ampliado para evitar el overflow
+        leadingWidth: 130,
         leading: Row(
           children: [
             const SizedBox(width: 12),
             IconButton(
               icon: const Icon(Icons.menu, color: Colors.white, size: 24),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              onPressed: () {
-                _scaffoldKey.currentState?.openDrawer();
-              },
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
             ),
             const SizedBox(width: 16),
             IconButton(
               icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
               onPressed: () => Navigator.pushAndRemoveUntil(
                 context, 
                 MaterialPageRoute(builder: (_) => const PrincipalAdminScreen()),
@@ -193,7 +263,6 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
             presentacionController: _presentacionController,
             cantidadController: _cantidadController,
             cantidadMinimaMayoristaController: _cantidadMinimaMayoristaController,
-            descripcionController: _descripcionController,
             imagenProducto: _imagenProducto,
             onTapImagen: () async {
               final img = await _picker.pickImage(source: img_picker.ImageSource.gallery, maxWidth: 600, maxHeight: 600, imageQuality: 50);
@@ -202,6 +271,10 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
             categoriasList: _categoriasList,
             categoriaSeleccionadaId: _categoriaSeleccionadaId,
             onChangedCategoria: (id) => setState(() => _categoriaSeleccionadaId = id),
+            tiposList: _tiposList,
+            tipoSeleccionadoId: _tipoSeleccionadoId,
+            onChangedTipo: (id) => setState(() => _tipoSeleccionadoId = id),
+            cargandoTipos: _cargandoTipos,
             onAgregarCategoriaClick: _mostrarModalCrearCategoria,
             onGuardar: _ejecutarGuardado,
             cargando: _cargando,

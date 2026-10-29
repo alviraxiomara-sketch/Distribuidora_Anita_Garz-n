@@ -5,7 +5,6 @@ import 'package:frontend/widgets/home_footer_contacts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/cart.dart';
-import 'package:frontend/screens/notificaciones_admin.dart'; // <--- 1. Importar la pantalla de notificaciones
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
 import 'package:frontend/services/api_config.dart';
@@ -73,21 +72,33 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
               context,
               MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
             ),
-            icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
+            icon: const Icon(
+              Icons.notifications_none,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CartScreen()),
             ),
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 26),
+            icon: const Icon(
+              Icons.shopping_cart_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
-            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
+            icon: const Icon(
+              Icons.account_circle_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -106,12 +117,18 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF063B5D).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.5)),
+                border: Border.all(
+                  color: const Color(0xFF00A8FF).withOpacity(0.5),
+                ),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.local_shipping_rounded, color: Color(0xFF00A8FF), size: 22),
+                  Icon(
+                    Icons.local_shipping_rounded,
+                    color: Color(0xFF00A8FF),
+                    size: 22,
+                  ),
                   SizedBox(width: 12),
                   Text(
                     '¡Estamos listos para atenderte!',
@@ -136,7 +153,9 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.5)),
+                border: Border.all(
+                  color: const Color(0xFF00A8FF).withOpacity(0.5),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,11 +170,23 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildBenefitRow(Icons.speed_rounded, 'Entregas Rápidas', 'Despachos oportunos para tu negocio o evento.'),
+                  _buildBenefitRow(
+                    Icons.speed_rounded,
+                    'Entregas Rápidas',
+                    'Despachos oportunos para tu negocio o evento.',
+                  ),
                   const SizedBox(height: 14),
-                  _buildBenefitRow(Icons.inventory_2_outlined, 'Variedad Garantizada', 'Amplio catálogo en gaseosas, cervezas, jugos y más.'),
+                  _buildBenefitRow(
+                    Icons.inventory_2_outlined,
+                    'Variedad Garantizada',
+                    'Amplio catálogo en gaseosas, cervezas, jugos y más.',
+                  ),
                   const SizedBox(height: 14),
-                  _buildBenefitRow(Icons.verified_outlined, 'Precios Especiales', 'Atención directa y las mejores tarifas de distribución.'),
+                  _buildBenefitRow(
+                    Icons.verified_outlined,
+                    'Precios Especiales',
+                    'Atención directa y las mejores tarifas de distribución.',
+                  ),
                 ],
               ),
             ),
@@ -176,7 +207,8 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
             width: 52,
             height: 52,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy, color: Colors.white, size: 28),
+            errorBuilder: (_, __, ___) =>
+                const Icon(Icons.smart_toy, color: Colors.white, size: 28),
           ),
         ),
       ),
@@ -201,9 +233,19 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
             ],
           ),
         ),
