@@ -29,7 +29,6 @@ export const obtenerCategorias = async () => {
             .select(`
                 id_categoria,
                 nombre,
-                descripcion,
                 activo,
                 created_at,
                 updated_at
@@ -54,7 +53,6 @@ export const obtenerCategoriaPorId = async (id_categoria) => {
             .select(`
                 id_categoria,
                 nombre,
-                descripcion,
                 activo,
                 created_at,
                 updated_at

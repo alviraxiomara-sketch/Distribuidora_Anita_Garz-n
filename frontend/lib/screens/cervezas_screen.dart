@@ -30,13 +30,20 @@ class _CervezasScreenState extends State<CervezasScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/categorias');
+      print('Haciendo petición a: $url');
+
       final res = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/categorias'),
+        url,
         headers: {
           ...ApiConfig.headers,
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
+
+      print('Código de respuesta: ${res.statusCode}');
+      print('Cuerpo de respuesta: ${res.body}');
 
       if (res.statusCode == 200 && mounted) {
         final decoded = jsonDecode(res.body);
@@ -44,7 +51,9 @@ class _CervezasScreenState extends State<CervezasScreen> {
           _categoriasList = decoded is List ? decoded : [];
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      print('Error al cargar categorías: $e');
+    }
   }
 
   @override
@@ -68,12 +77,18 @@ class _CervezasScreenState extends State<CervezasScreen> {
             ),
             const SizedBox(width: 12),
             IconButton(
-              icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
+              icon: const Icon(
+                Icons.home_outlined,
+                color: Colors.white,
+                size: 24,
+              ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const PrincipalClienteScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const PrincipalClienteScreen(),
+                ),
                 (_) => false,
               ),
             ),
@@ -85,14 +100,22 @@ class _CervezasScreenState extends State<CervezasScreen> {
               context,
               MaterialPageRoute(builder: (_) => const CartScreen()),
             ),
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 24),
+            icon: const Icon(
+              Icons.shopping_cart_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
-            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
+            icon: const Icon(
+              Icons.account_circle_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -117,21 +140,12 @@ class _CervezasScreenState extends State<CervezasScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF384E5E).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF00A8FF),
-                  width: 2,
-                ),
+                border: Border.all(color: const Color(0xFF00A8FF), width: 2),
               ),
               child: Column(
                 children: [
-                  CervezaOpcionCard(
-                    titulo: 'Importadas',
-                    onTap: () {},
-                  ),
-                  CervezaOpcionCard(
-                    titulo: 'Nacionales',
-                    onTap: () {},
-                  ),
+                  CervezaOpcionCard(titulo: 'Importadas', onTap: () {}),
+                  CervezaOpcionCard(titulo: 'Nacionales', onTap: () {}),
                 ],
               ),
             ),

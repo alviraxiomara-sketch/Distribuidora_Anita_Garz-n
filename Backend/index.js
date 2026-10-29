@@ -40,6 +40,12 @@ app.use("/api/notificaciones", notificacionRoutes);
 app.use("/api/recuperar", recuperarRoutes);
 app.use("/api/chatbox", chatboxRouter);
 
+
+//montando la ruta de Api
+app.get('/health', (req, res) => {
+    res.status(200).send('ok');
+});
+
 // ruta principal
 app.get("/", (req, res) => {
     res.json({
