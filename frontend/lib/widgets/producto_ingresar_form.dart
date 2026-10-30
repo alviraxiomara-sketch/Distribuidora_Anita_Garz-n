@@ -61,33 +61,38 @@ class ProductoFormContainer extends StatefulWidget {
 }
 
 class _ProductoFormContainerState extends State<ProductoFormContainer> {
-  // "Caja" solo aparece para aguardiente/licores y jugos
+  // Opciones de presentación adaptadas por tipo de producto
   List<String> _obtenerOpcionesPresentacion(String nombre) {
     final texto = nombre.toLowerCase();
 
     if (texto.contains('aguardiente') || texto.contains('ron') || texto.contains('whisky') || texto.contains('tequila') || texto.contains('licor')) {
       return ['Media', 'Botella', 'Garrafa', 'Caja'];
-    } else if (texto.contains('jugo') || texto.contains('hit') || texto.contains('del valle') ) {
-      return ['Caja', 'Botella','Personal'];
+    } else if (texto.contains('jugo') || texto.contains('hit') || texto.contains('del valle')) {
+      return ['Caja', 'Botella', 'Personal'];
     } else if (texto.contains('cerveza') || texto.contains('aguila') || texto.contains('corona') || texto.contains('heineken') || texto.contains('pilsen') || texto.contains('poker') || texto.contains('club')) {
       return ['Botella', 'Lata', 'six pack'];
-    } else if (texto.contains('gaseosa') || texto.contains('coca') || texto.contains('postobon') || texto.contains('colombiana') || texto.contains('sprite')) {
-      return ['personal', 'Lata','familiar 2.5L', 'Mega Grande 3L', 'Mediano 1.5L'];
+    } else if (texto.contains('gaseosa') || texto.contains('coca') || texto.contains('manzana') || texto.contains('uva') || texto.contains('cuatro') || texto.contains('quatro') || texto.contains('postobon') || texto.contains('colombiana') || texto.contains('sprite')) {
+      return ['personal', 'Lata', 'familiar 2.5L', 'Mega Grande 3L', 'Mediano 1.5L'];
     }
 
     return ['Media', 'Botella', 'Garrafa', 'Lata'];
   }
 
-  // Verifica si la presentación elegida requiere color de tapa
-  bool _requiereTapa(String presentacion) {
-    return ['Media', 'Botella', 'Garrafa'].contains(presentacion);
+  // La tapa solo debe aparecer si el producto es un licor (aguardiente, ron, etc.)
+  bool _requiereTapa(String nombre) {
+    final texto = nombre.toLowerCase();
+    return texto.contains('aguardiente') || 
+           texto.contains('ron') || 
+           texto.contains('whisky') || 
+           texto.contains('tequila') || 
+           texto.contains('licor');
   }
 
   @override
   Widget build(BuildContext context) {
     final nombreTexto = widget.nombreController.text;
     final opcionesPresentacion = _obtenerOpcionesPresentacion(nombreTexto);
-    final muestraTapa = _requiereTapa(widget.presentacionController.text);
+    final muestraTapa = _requiereTapa(nombreTexto);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -136,15 +141,12 @@ class _ProductoFormContainerState extends State<ProductoFormContainer> {
               onChanged: (val) {
                 setState(() {
                   widget.presentacionController.text = val ?? '';
-                  if (!_requiereTapa(val ?? '') && widget.onChangedTapa != null) {
-                    widget.onChangedTapa!(null);
-                  }
                 });
               },
             ),
           ),
 
-          // Menú desplegable independiente de Tapa (con Tapa Amarilla)
+          // Menú desplegable independiente de Tapa (solo aparece para licores)
           if (muestraTapa)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),

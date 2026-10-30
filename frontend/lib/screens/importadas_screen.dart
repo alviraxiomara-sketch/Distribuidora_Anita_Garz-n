@@ -19,19 +19,15 @@ class ImportadasScreen extends StatefulWidget {
 
 class _ImportadasScreenState extends State<ImportadasScreen> {
   bool _cargando = true;
+  bool _cargandoProductos = true;
   List<dynamic> _categoriasList = [];
-  
-  final List<String> _productosImportados = [
-    'Corona Extra',
-    'Heineken',
-    'Stella Artois',
-    'Budweiser',
-  ];
+  List<dynamic> _productosList = [];
 
   @override
   void initState() {
     super.initState();
     _cargarCategorias();
+    _cargarProductosDesdeBD();
   }
 
   Future<void> _cargarCategorias() async {
@@ -48,14 +44,66 @@ class _ImportadasScreenState extends State<ImportadasScreen> {
 
       if (res.statusCode == 200 && mounted) {
         final decoded = jsonDecode(res.body);
+        List<dynamic> lista = [];
+        if (decoded is List) {
+          lista = decoded;
+        } else if (decoded is Map) {
+          var temp = decoded['categorias'] ?? decoded['data'] ?? [];
+          if (temp is List) lista = temp;
+        }
         setState(() {
-          _categoriasList = decoded is List ? decoded : [];
+          _categoriasList = lista;
         });
       }
     } catch (_) {
     } finally {
       if (mounted) {
         setState(() => _cargando = false);
+      }
+    }
+  }
+
+  Future<void> _cargarProductosDesdeBD() async {
+    setState(() => _cargandoProductos = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/productos'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      print('ESTATUS RESPUESTA IMPORTADAS: ${res.statusCode}');
+      print('CUERPO DE LA RESPUESTA IMPORTADAS: ${res.body}');
+
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        List<dynamic> lista = [];
+        
+        if (decoded is List) {
+          lista = decoded;
+        } else if (decoded is Map) {
+          var temp = decoded['productos'] ?? decoded['data'] ?? [];
+          if (temp is List) {
+            lista = temp;
+          }
+        }
+
+        setState(() {
+          _productosList = lista;
+          _cargandoProductos = false;
+        });
+      } else {
+        setState(() => _cargandoProductos = false);
+      }
+    } catch (e) {
+      print('ERROR DE CONEXIÓN IMPORTADAS: $e');
+      if (mounted) {
+        setState(() => _cargandoProductos = false);
       }
     }
   }
@@ -102,6 +150,8 @@ class _ImportadasScreenState extends State<ImportadasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final productosSeguros = _productosList;
+
     return Scaffold(
       backgroundColor: const Color(0xFF031A2E),
       appBar: AppBar(
@@ -111,14 +161,12 @@ class _ImportadasScreenState extends State<ImportadasScreen> {
         titleSpacing: 0,
         title: Row(
           children: [
-            // 1. Primero el menú hamburguesa
             Builder(
               builder: (ctx) => IconButton(
                 icon: const Icon(Icons.menu, color: Colors.white),
                 onPressed: () => Scaffold.of(ctx).openDrawer(),
               ),
             ),
-            // 2. Después la flecha de retroceso
             IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
@@ -168,18 +216,32 @@ class _ImportadasScreenState extends State<ImportadasScreen> {
                   borderRadius: BorderRadius.circular(16),
                   color: const Color(0xFF063B5D).withOpacity(0.3),
                 ),
-                child: ListView.builder(
-                  itemCount: _productosImportados.length,
-                  itemBuilder: (context, index) {
-                    final producto = _productosImportados[index];
-                    return ItemCatalogoCard(
-                      titulo: producto,
-                      onTap: () {
-                        // Acción al presionar
-                      },
-                    );
-                  },
-                ),
+                child: _cargandoProductos
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
+                    : productosSeguros.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No hay productos registrados en esta categoría',
+                              style: TextStyle(color: Colors.white70, fontSize: 16),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: productosSeguros.length,
+                            itemBuilder: (context, index) {
+                              final producto = productosSeguros[index];
+                              final nombreProducto = producto != null && producto is Map 
+                                  ? (producto['nombre'] ?? producto['Nombre'] ?? 'Sin nombre')
+                                  : 'Sin nombre';
+
+                              return ItemCatalogoCard(
+                                titulo: nombreProducto,
+                                onTap: () {
+                                  // Acción al presionar el producto
+                                },
+                              );
+                            },
+                          ),
               ),
             ),
           ],
