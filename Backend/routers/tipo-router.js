@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import * as TipoController from '../controllers/tipo-controller.js';
+
 const router = express.Router();
-const TipoController = require('../controllers/tipo-controller');
 
 router.get('/', TipoController.listarTipos);
 
-module.exports = router;
+export default router;
