@@ -11,7 +11,6 @@ class ProductoFormContainer extends StatefulWidget {
   final TextEditingController cantidadController;
   final TextEditingController cantidadMinimaMayoristaController;
   
-  // Nuevo parámetro opcional para recibir o reportar el color de tapa seleccionado
   final String? tapaSeleccionada;
   final ValueChanged<String?>? onChangedTapa;
 
@@ -62,21 +61,21 @@ class ProductoFormContainer extends StatefulWidget {
 }
 
 class _ProductoFormContainerState extends State<ProductoFormContainer> {
-  // Opciones de presentación actualizadas (Garrafa, Media, Botella, Lata, Caja)
+  // "Caja" solo aparece para aguardiente/licores y jugos
   List<String> _obtenerOpcionesPresentacion(String nombre) {
     final texto = nombre.toLowerCase();
 
-    if (texto.contains('cerveza') || texto.contains('aguila') || texto.contains('corona') || texto.contains('heineken') || texto.contains('pilsen') || texto.contains('poker') || texto.contains('club')) {
-      return ['Botella', 'Lata', 'Caja'];
-    } else if (texto.contains('aguardiente') || texto.contains('ron') || texto.contains('whisky') || texto.contains('tequila') || texto.contains('licor')) {
+    if (texto.contains('aguardiente') || texto.contains('ron') || texto.contains('whisky') || texto.contains('tequila') || texto.contains('licor')) {
       return ['Media', 'Botella', 'Garrafa', 'Caja'];
+    } else if (texto.contains('jugo') || texto.contains('hit') || texto.contains('del valle') ) {
+      return ['Caja', 'Botella','Personal'];
+    } else if (texto.contains('cerveza') || texto.contains('aguila') || texto.contains('corona') || texto.contains('heineken') || texto.contains('pilsen') || texto.contains('poker') || texto.contains('club')) {
+      return ['Botella', 'Lata', 'six pack'];
     } else if (texto.contains('gaseosa') || texto.contains('coca') || texto.contains('postobon') || texto.contains('colombiana') || texto.contains('sprite')) {
-      return ['Botella', 'Lata', 'Caja'];
-    } else if (texto.contains('jugo') || texto.contains('hit') || texto.contains('nectar')) {
-      return ['Caja', 'Botella', 'Lata'];
+      return ['personal', 'Lata','familiar 2.5L', 'Mega Grande 3L', 'Mediano 1.5L'];
     }
 
-    return ['Garrafa', 'Media', 'Botella', 'Lata', 'Caja'];
+    return ['Media', 'Botella', 'Garrafa', 'Lata'];
   }
 
   // Verifica si la presentación elegida requiere color de tapa
@@ -117,7 +116,7 @@ class _ProductoFormContainerState extends State<ProductoFormContainer> {
           _buildTextField('Precio detal', widget.valorController, keyboardType: TextInputType.number),
           _buildTextField('Precio mayorista', widget.precioMayoristaController, keyboardType: TextInputType.number),
           
-          // Desplegable de Presentación limpio
+          // Desplegable de Presentación
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: DropdownButtonFormField<String>(
@@ -145,7 +144,7 @@ class _ProductoFormContainerState extends State<ProductoFormContainer> {
             ),
           ),
 
-          // Menú desplegable independiente de Tapa (con Tapa Amarilla en lugar de Blanca)
+          // Menú desplegable independiente de Tapa (con Tapa Amarilla)
           if (muestraTapa)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
