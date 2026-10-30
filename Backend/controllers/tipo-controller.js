@@ -1,6 +1,6 @@
-const TipoModel = require('../models/tipo-model');
+import * as TipoModel from '../models/tipo-model.js';
 
-class TipoController {
+export class TipoController {
   static async listarTipos(req, res) {
     try {
       const tipos = await TipoModel.obtenerTodos();
@@ -10,5 +10,3 @@ class TipoController {
     }
   }
 }
-
-module.exports = TipoController;
