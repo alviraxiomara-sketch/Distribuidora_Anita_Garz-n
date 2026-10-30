@@ -62,26 +62,26 @@ class ProductoFormContainer extends StatefulWidget {
 }
 
 class _ProductoFormContainerState extends State<ProductoFormContainer> {
-  // Opciones de presentación según el nombre ingresado
+  // Opciones de presentación actualizadas (Garrafa, Media, Botella, Lata, Caja)
   List<String> _obtenerOpcionesPresentacion(String nombre) {
     final texto = nombre.toLowerCase();
 
     if (texto.contains('cerveza') || texto.contains('aguila') || texto.contains('corona') || texto.contains('heineken') || texto.contains('pilsen') || texto.contains('poker') || texto.contains('club')) {
-      return ['Botella', 'Lata'];
+      return ['Botella', 'Lata', 'Caja'];
     } else if (texto.contains('aguardiente') || texto.contains('ron') || texto.contains('whisky') || texto.contains('tequila') || texto.contains('licor')) {
-      return ['Media', 'Botella', 'Litro', 'Garrafa'];
+      return ['Media', 'Botella', 'Garrafa', 'Caja'];
     } else if (texto.contains('gaseosa') || texto.contains('coca') || texto.contains('postobon') || texto.contains('colombiana') || texto.contains('sprite')) {
-      return ['Personal', 'Litro', '1.5 Litros', '2 Litros', '3 Litros'];
+      return ['Botella', 'Lata', 'Caja'];
     } else if (texto.contains('jugo') || texto.contains('hit') || texto.contains('nectar')) {
-      return ['Caja pequeña', 'Botella personal', 'Litro'];
+      return ['Caja', 'Botella', 'Lata'];
     }
 
-    return ['Botella', 'Lata', 'Litro'];
+    return ['Garrafa', 'Media', 'Botella', 'Lata', 'Caja'];
   }
 
   // Verifica si la presentación elegida requiere color de tapa
   bool _requiereTapa(String presentacion) {
-    return ['Media', 'Botella', 'Litro', 'Garrafa'].contains(presentacion);
+    return ['Media', 'Botella', 'Garrafa'].contains(presentacion);
   }
 
   @override
@@ -117,7 +117,7 @@ class _ProductoFormContainerState extends State<ProductoFormContainer> {
           _buildTextField('Precio detal', widget.valorController, keyboardType: TextInputType.number),
           _buildTextField('Precio mayorista', widget.precioMayoristaController, keyboardType: TextInputType.number),
           
-          // Desplegable de Presentación limpio (sin mezclar texto de tapa)
+          // Desplegable de Presentación limpio
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: DropdownButtonFormField<String>(
@@ -145,7 +145,7 @@ class _ProductoFormContainerState extends State<ProductoFormContainer> {
             ),
           ),
 
-          // Menú desplegable independiente de Tapa
+          // Menú desplegable independiente de Tapa (con Tapa Amarilla en lugar de Blanca)
           if (muestraTapa)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -155,7 +155,7 @@ class _ProductoFormContainerState extends State<ProductoFormContainer> {
                 style: const TextStyle(color: Colors.white),
                 decoration: _inputDecoration('Color de Tapa'),
                 hint: const Text('Seleccione tapa', style: TextStyle(color: Colors.white70)),
-                items: ['Azul', 'Verde', 'Negra', 'Roja', 'Blanca'].map<DropdownMenuItem<String>>((tapa) {
+                items: ['Azul', 'Verde', 'Negra', 'Roja', 'Amarilla'].map<DropdownMenuItem<String>>((tapa) {
                   return DropdownMenuItem<String>(
                     value: tapa,
                     child: Text('Tapa $tapa', style: const TextStyle(color: Colors.white)),

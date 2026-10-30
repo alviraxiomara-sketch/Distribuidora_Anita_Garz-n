@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/principal_admin.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';
-import 'package:frontend/widgets/admin_drawer.dart'; // <--- Corregido al Drawer de Administrador
+import 'package:frontend/widgets/admin_drawer.dart';
 import 'package:frontend/widgets/producto_ingresar_form.dart';
 
 class IngresarProductoScreen extends StatefulWidget {
@@ -239,7 +239,7 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFF031A2E),
-      drawer: const AdminDrawer(), // <--- Actualizado al Drawer exclusivo del Administrador
+      drawer: const AdminDrawer(),
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
