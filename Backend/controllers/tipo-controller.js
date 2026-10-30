@@ -1,4 +1,4 @@
-import * as TipoModel from '../models/tipo-model.js';
+import { TipoModel } from '../models/tipo-model.js';
 
 export class TipoController {
   static async listarTipos(req, res) {

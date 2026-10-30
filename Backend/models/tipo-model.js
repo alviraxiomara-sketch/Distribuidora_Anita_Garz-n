@@ -1,11 +1,9 @@
-const supabase = require('../supabase'); // Asegúrate de que la ruta apunte bien a tu archivo supabase.js
+import { supabase } from '../config/supabase.js';
 
-class TipoModel {
+export class TipoModel {
   static async obtenerTodos() {
     const { data, error } = await supabase.from('tipos').select('*');
     if (error) throw error;
     return data;
   }
 }
-
-module.exports = TipoModel;
