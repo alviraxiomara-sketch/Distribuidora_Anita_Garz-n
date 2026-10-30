@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/principal_admin.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';
-import 'package:frontend/widgets/app_drawer.dart';
+import 'package:frontend/widgets/admin_drawer.dart'; // <--- Corregido al Drawer de Administrador
 import 'package:frontend/widgets/producto_ingresar_form.dart';
 
 class IngresarProductoScreen extends StatefulWidget {
@@ -40,7 +40,7 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
   
   int? _categoriaSeleccionadaId;
   int? _tipoSeleccionadoId;
-  String? _tapaSeleccionada; // <--- Variable para almacenar el color de la tapa independiente
+  String? _tapaSeleccionada; 
 
   @override
   void initState() {
@@ -178,15 +178,11 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
       request.fields['precio_detal'] = valor;
       request.fields['precio_mayorista'] = _precioMayoristaController.text.trim().isEmpty ? '0' : _precioMayoristaController.text.trim();
       request.fields['presentacion'] = _presentacionController.text.trim();
-      
-      // ENVIAR EL COLOR DE LA TAPA SEPARADO
       request.fields['tapa'] = _tapaSeleccionada ?? ''; 
-      
       request.fields['cantidad'] = _cantidadController.text.trim().isEmpty ? '0' : _cantidadController.text.trim();
       request.fields['cantidad_minima_mayorista'] = _cantidadMinimaMayoristaController.text.trim().isEmpty ? '0' : _cantidadMinimaMayoristaController.text.trim();
       request.fields['id_categoria'] = _categoriaSeleccionadaId.toString();
       
-      // Buscar el nombre del tipo seleccionado (o enviar su ID/texto según requiera el backend)
       final tipoEncontrado = _tiposList.firstWhere(
         (t) => (int.tryParse((t['id_tipo'] ?? t['id'])?.toString() ?? '0') ?? 0) == _tipoSeleccionadoId,
         orElse: () => {'nombre': 'Nacionales'},
@@ -243,7 +239,7 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFF031A2E),
-      drawer: AppDrawer(categorias: _categoriasList, isLoading: _cargandoCategorias),
+      drawer: const AdminDrawer(), // <--- Actualizado al Drawer exclusivo del Administrador
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
@@ -285,11 +281,8 @@ class _IngresarProductoScreenState extends State<IngresarProductoScreen> {
             presentacionController: _presentacionController,
             cantidadController: _cantidadController,
             cantidadMinimaMayoristaController: _cantidadMinimaMayoristaController,
-            
-            // CONEXIÓN DE LA TAPA
             tapaSeleccionada: _tapaSeleccionada,
             onChangedTapa: (val) => setState(() => _tapaSeleccionada = val),
-
             imagenProducto: _imagenProducto,
             onTapImagen: () async {
               final img = await _picker.pickImage(source: img_picker.ImageSource.gallery, maxWidth: 600, maxHeight: 600, imageQuality: 50);

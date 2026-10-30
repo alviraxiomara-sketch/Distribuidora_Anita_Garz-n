@@ -46,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
-      
+
       final url = Uri.parse('${ApiConfig.baseUrl}/auth/profile');
       final response = await http.get(
         url,
@@ -59,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final usuario = data['usuario'] ?? data;
-        
+
         setState(() {
           _nombre.text = usuario['nombre'] ?? '';
           _correo.text = usuario['correo'] ?? '';
@@ -121,12 +121,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Perfil actualizado con éxito!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('¡Perfil actualizado con éxito!'),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) setState(() => _cargando = false);
@@ -179,7 +185,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _cargando
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00A8FF)),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -219,7 +227,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF084B75),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF00A8FF), width: 2),
+                      border: Border.all(
+                        color: const Color(0xFF00A8FF),
+                        width: 2,
+                      ),
                     ),
                     child: Column(
                       children: [
@@ -267,7 +278,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: const Color(0xFF0A74C0),
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text('Cerrar sesión', style: TextStyle(fontSize: 12)),
+                        child: const Text(
+                          'Cerrar sesión',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ),
                     ],
                   ),
