@@ -1,18 +1,14 @@
 import bcrypt from "bcrypt";
-import nodemailer from "nodemailer";
+import { BrevoClient } from '@getbrevo/brevo';
 import {crearCodigoRecuperacion, obtenerCodigoValido, marcarCodigoComoUsado, invalidarCodigosAnteriores} from "../models/recuperar-model.js";
 import {obtenerUsuarioPorCorreo, actualizarPassword} from "../models/user-model.js";
 
 // ==========================
-// CONFIGURAR NODEMAILER
+// CONFIGURAR CLIENTE DE BREVO
 // ==========================
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS   
-    }
+const brevo = new BrevoClient({
+    apiKey: process.env.BREVO_API_KEY,
 });
 
 
@@ -91,18 +87,23 @@ export const forgotPassword = async (
 
         }
 
-        await transporter.sendMail({
+        await brevo.transactionalEmails.sendTransacEmail({
 
-            from:
-                process.env.EMAIL_USER,
+            sender: {
+                name: "Distribuidora Anita",
+                email: process.env.EMAIL_USER
+            },
 
-            to:
-                usuario.correo,
+            to: [
+                {
+                    email: usuario.correo,
+                    name: usuario.nombre
+                }
+            ],
 
-            subject:
-                "Código de recuperación - Distribuidora Anita",
+            subject: "Código de recuperación - Distribuidora Anita",
 
-            html: `
+            htmlContent: `
 
                 <div style="font-family: Arial; max-width:600px; margin:auto;">
 
@@ -275,18 +276,23 @@ export const resetPassword = async (
             codigoValido.id_codigo
         );
 
-        await transporter.sendMail({
+        await brevo.transactionalEmails.sendTransacEmail({
 
-            from:
-                process.env.EMAIL_USER,
+            sender: {
+                name: "Distribuidora Anita",
+                email: process.env.EMAIL_USER
+            },
 
-            to:
-                usuario.correo,
+            to: [
+                {
+                    email: usuario.correo,
+                    name: usuario.nombre
+                }
+            ],
 
-            subject:
-                "Contraseña actualizada",
+            subject: "Contraseña actualizada",
 
-            html: `
+            htmlContent: `
 
                 <div style="font-family: Arial;">
 

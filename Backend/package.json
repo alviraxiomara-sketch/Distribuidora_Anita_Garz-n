@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/alviraxiomara-sketch/Distribuidora_Anita_Garz-n#readme",
   "dependencies": {
+    "@getbrevo/brevo": "^6.2.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.116.0",
     "bcrypt": "^6.0.0",
