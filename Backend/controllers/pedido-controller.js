@@ -1,5 +1,5 @@
 import {crearPedido, crearDetallePedido, obtenerPedidosPorUsuario, obtenerTodosLosPedidos, obtenerPedidoPorId, actualizarEstadoPedido} from "../models/pedido-model.js";
-import {enviarNotificacion} from "../services/notificacion-service.js";
+import { enviarCodigoVerificacion } from "../services/notificacion-service.js";
 import { supabase } from "../config/supabase.js";
 
 // ==========================
