@@ -87,14 +87,10 @@ REGLAS DE ATENCIÓN:
 `;
 
     // 6. Inferencia con Groq + Sistema de Respaldo (Fallback)
-       const modelosAProbar = [
-      "openai/gpt-oss-120b",
-      "openai/gpt-oss-20b",
-      "groq/compound-mini",
-      "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant"
-    ];
-
+      const modelosAProbar = [
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant"
+];
     let respuestaTexto = null;
 
     for (const modelo of modelosAProbar) {
