@@ -24,7 +24,6 @@ export const obtenerCarritoPorUsuario = async (id_usuario) => {
                     productos (
                         id_producto,
                         nombre,
-                        descripcion,
                         presentacion,
                         precio_detal,
                         precio_mayorista,
@@ -81,7 +80,6 @@ export const obtenerCarritoPorId = async (id_carrito) => {
                     productos (
                         id_producto,
                         nombre,
-                        descripcion,
                         presentacion,
                         precio_detal,
                         precio_mayorista,
