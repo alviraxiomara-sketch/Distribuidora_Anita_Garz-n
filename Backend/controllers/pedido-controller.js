@@ -516,15 +516,11 @@ export const crear = async (req, res) => {
         // RESPUESTA
         // ==========================
 
-        await enviarNotificacion(
-
-        id_usuario,
-
-        "Pedido recibido",
-
-        `Tu pedido #${pedido.id_pedido} fue registrado correctamente.`
-
-    );
+        await enviarCodigoVerificacion(
+            req.usuario.correo, // o el correo del usuario
+            req.usuario.nombre,
+    "Pedido recibido"
+);
 
 
 
