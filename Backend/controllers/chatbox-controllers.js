@@ -87,7 +87,7 @@ REGLAS DE ATENCIÓN:
 `;
 
     // 6. Inferencia con Groq + Sistema de Respaldo (Fallback)
-      const modelosAProbar = [
+    const modelosAProbar = [
   "llama-3.3-70b-versatile",
   "llama-3.1-8b-instant"
 ];
