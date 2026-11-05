@@ -5,7 +5,7 @@ class CartProductCardItem extends StatelessWidget {
   final String nombre;
   final double precioUnitario;
   final String presentacion;
-  final String imagenAsset;
+  final String imagenUrl; // <--- Actualizado para recibir la URL de la BD
   final int cantidad;
   final bool seleccionado;
   final Function(int, int) onCantidadChanged;
@@ -18,7 +18,7 @@ class CartProductCardItem extends StatelessWidget {
     required this.nombre,
     required this.precioUnitario,
     required this.presentacion,
-    required this.imagenAsset,
+    required this.imagenUrl,
     required this.cantidad,
     required this.seleccionado,
     required this.onCantidadChanged,
@@ -44,25 +44,31 @@ class CartProductCardItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Imagen del producto
+          // Imagen del producto desde la red (Cloudinary)
           Container(
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white12,
               borderRadius: BorderRadius.circular(12),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                imagenAsset,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.local_drink,
-                  color: Color(0xFF063B5D),
-                  size: 35,
-                ),
-              ),
+              child: imagenUrl.isNotEmpty
+                  ? Image.network(
+                      imagenUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.local_drink,
+                        color: Colors.white,
+                        size: 35,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.local_drink,
+                      color: Colors.white,
+                      size: 35,
+                    ),
             ),
           ),
           const SizedBox(width: 12),
@@ -73,28 +79,32 @@ class CartProductCardItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  nombre,
+                  nombre.toUpperCase(),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   '\$${precioUnitario.toStringAsFixed(0)}',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF00A8FF),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
-                  presentacion,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
+                if (presentacion.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    presentacion,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

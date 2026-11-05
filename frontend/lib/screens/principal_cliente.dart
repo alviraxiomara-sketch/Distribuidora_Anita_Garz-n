@@ -4,7 +4,7 @@ import 'package:frontend/screens/notificaciones_cliente.dart';
 import 'package:frontend/widgets/home_footer_contacts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/screens/cart.dart';
+import 'package:frontend/screens/cart_screen.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
 import 'package:frontend/services/api_config.dart';

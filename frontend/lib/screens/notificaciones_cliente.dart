@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/screens/cart.dart';
+import 'package:frontend/screens/cart_screen.dart';
 import 'package:frontend/screens/principal_cliente.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';

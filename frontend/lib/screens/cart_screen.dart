@@ -21,13 +21,13 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   bool _cargando = true;
   List<dynamic> _detallesCarrito = [];
-  List<dynamic> _categoriasList = []; // <--- Variable declarada correctamente
+  List<dynamic> _categoriasList = [];
 
   @override
   void initState() {
     super.initState();
     _cargarCarrito();
-    _cargarCategorias(); // <--- Método para cargar las categorías al iniciar
+    _cargarCategorias();
   }
 
   Future<void> _cargarCategorias() async {
@@ -197,14 +197,25 @@ class _CartScreenState extends State<CartScreen> {
                                 itemBuilder: (context, index) {
                                   final item = _detallesCarrito[index];
                                   final producto = item['productos'] ?? {};
+                                  
+                                  // Extraemos los datos reales del producto
+                                  final nombre = producto['nombre'] ?? 'Producto';
+                                  final presentacion = producto['presentacion'] ?? '';
+                                  final tapa = producto['tapa'] ?? '';
+                                  final imagenUrl = producto['imagen_url'] ?? '';
+
+                                  // Armamos el texto descriptivo combinado
+                                  String detalleExtra = presentacion;
+                                  if (tapa.isNotEmpty) {
+                                    detalleExtra += ' - Tapa $tapa';
+                                  }
+
                                   return CartProductCardItem(
                                     index: index,
-                                    nombre: producto['nombre'] ?? 'Producto',
-                                    precioUnitario:
-                                        (item['precio_unitario'] as num)
-                                            .toDouble(),
-                                    presentacion: 'Disponible',
-                                    imagenAsset: 'assets/images/gaseosa.jpg',
+                                    nombre: nombre,
+                                    precioUnitario: (item['precio_unitario'] as num).toDouble(),
+                                    presentacion: detalleExtra.isNotEmpty ? detalleExtra : 'Disponible',
+                                    imagenUrl: imagenUrl, // Pasamos la URL correcta de la BD
                                     cantidad: item['cantidad'],
                                     seleccionado: true,
                                     onCantidadChanged: _cambiarCantidad,

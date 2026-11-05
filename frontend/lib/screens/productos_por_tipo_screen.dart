@@ -8,7 +8,7 @@ import 'package:frontend/screens/home.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
-import 'package:frontend/widgets/producto_card.dart'; // <--- Importamos el nuevo widget
+import 'package:frontend/widgets/producto_card.dart';
 
 class ProductosPorTipoScreen extends StatefulWidget {
   final String categoria; 
@@ -69,14 +69,8 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/productos').replace(
-        queryParameters: {
-          'tipo': widget.tipo,
-        },
-      );
-
       final res = await http.get(
-        uri,
+        Uri.parse('${ApiConfig.baseUrl}/productos'),
         headers: {
           ...ApiConfig.headers,
           if (token != null) 'Authorization': 'Bearer $token',
@@ -94,10 +88,20 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
           if (temp is List) lista = temp;
         }
 
+        // 🔍 Filtrado estricto por Tipo y Categoría simultáneamente
         final listaFiltrada = lista.where((prod) {
           if (prod == null || prod is! Map) return false;
+          
           final tipoProd = prod['tipo']?.toString().trim().toLowerCase() ?? '';
-          return tipoProd == widget.tipo.trim().toLowerCase();
+          final tipoBuscado = widget.tipo.trim().toLowerCase();
+
+          final catProd = (prod['categorias']?['nombre'] ?? prod['categoria'] ?? '').toString().trim().toLowerCase();
+          final catBuscada = widget.categoria.trim().toLowerCase();
+
+          bool coincideTipo = tipoProd == tipoBuscado;
+          bool coincideCategoria = catProd.isEmpty || catProd == catBuscada;
+
+          return coincideTipo && coincideCategoria;
         }).toList();
 
         setState(() {
@@ -111,6 +115,79 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
       if (mounted) {
         setState(() => _cargandoProductos = false);
       }
+    }
+  }
+
+  // 🛒 Manejo de sesión y guardado en el carrito de compras
+  Future<void> _manejarAgregarCarrito(Map<String, dynamic> producto, int cantidad) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (!mounted) return;
+
+    // Si no ha iniciado sesión, redirigir al Login
+    if (token == null || token.isEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      return;
+    }
+
+    try {
+      final idProducto = producto['id_producto'] ?? producto['id'];
+
+      final res = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/carrito'),
+        headers: {
+          ...ApiConfig.headers,
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'id_producto': idProducto,
+          'cantidad': cantidad,
+        }),
+      );
+
+      if (!mounted) return;
+
+      // Validamos si el backend aceptó el registro en el carrito (200 o 201)
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Producto agregado al carrito'),
+            backgroundColor: Color(0xFF063B5D),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Mostramos el mensaje exacto que devuelva el servidor de Render si ocurre un error
+        String mensajeBackend = 'Error (${res.statusCode})';
+        try {
+          final decoded = jsonDecode(res.body);
+          mensajeBackend = decoded['mensaje'] ?? decoded['error'] ?? res.body;
+        } catch (_) {
+          mensajeBackend = res.body.isNotEmpty ? res.body : 'Error del servidor';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(mensajeBackend),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error de conexión: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -246,8 +323,8 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
                                 presentacion: producto['presentacion'] ?? '',
                                 tapa: producto['tapa'] ?? '',
                                 imagenUrl: producto['imagen_url'] ?? '',
-                                onAgregarCarrito: () {
-                                  // Acción al agregar al carrito
+                                onAgregarCarrito: (cantidadSeleccionada) {
+                                  _manejarAgregarCarrito(producto, cantidadSeleccionada);
                                 },
                               );
                             },
