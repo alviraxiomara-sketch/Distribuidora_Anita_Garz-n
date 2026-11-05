@@ -83,24 +83,39 @@ export const crear = async (req, res) => {
 };
 
 // ==========================
-// LISTAR PRODUCTOS
+// LISTAR PRODUCTOS (CON FILTROS FLEXIBLES)
 // ==========================
 
 export const listarProductos = async (req, res) => {
     try {
-        const { tipo } = req.query;
+        const { tipo, categoria } = req.query; // Capturamos ambos parámetros de la URL
         const { data, error } = await obtenerProductos();
         
         if (error) {
             return res.status(500).json({ error: error.message });
         }
 
+        let productosFiltrados = data;
+
+        // Imprimimos en consola para depurar qué está llegando exactamente
+        console.log("Filtros recibidos -> Categoría:", categoria, "| Tipo:", tipo);
+
+        // Filtrar por tipo (ej. Nacionales / Importadas) ignorando espacios y mayúsculas
         if (tipo) {
-            const productosFiltrados = data.filter(p => p.tipo && p.tipo.toLowerCase() === tipo.toLowerCase());
-            return res.status(200).json(productosFiltrados);
+            productosFiltrados = productosFiltrados.filter(
+                p => p.tipo && p.tipo.trim().toLowerCase() === tipo.trim().toLowerCase()
+            );
         }
 
-        return res.status(200).json(data);
+        // Filtrar por categoría (ej. Cervezas / Licores) ignorando espacios y mayúsculas
+        if (categoria) {
+            productosFiltrados = productosFiltrados.filter(p => {
+                const catNombre = p.categorias?.nombre || p.categoria || p.nombre_categoria || '';
+                return catNombre.trim().toLowerCase() === categoria.trim().toLowerCase();
+            });
+        }
+
+        return res.status(200).json(productosFiltrados);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }

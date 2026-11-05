@@ -6,8 +6,7 @@ import 'package:frontend/screens/login.dart';
 import 'package:frontend/screens/principal_cliente.dart';
 import 'package:frontend/screens/home.dart';
 import 'package:frontend/screens/profile.dart';
-import 'package:frontend/screens/importadas_screen.dart'; // Asegúrate de tener esta pantalla creada
-import 'package:frontend/screens/nacionales_screen.dart'; // Asegúrate de tener esta pantalla creada
+import 'package:frontend/screens/productos_por_tipo_screen.dart';
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 
@@ -58,7 +57,6 @@ class _TiposScreenState extends State<TiposScreen> {
     }
   }
 
-  // Función para verificar sesión al presionar la casa (Home)
   Future<void> _verificarSesionYRedirigirHome(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
@@ -80,7 +78,6 @@ class _TiposScreenState extends State<TiposScreen> {
     }
   }
 
-  // Función para verificar sesión al presionar el usuario (Profile / Login)
   Future<void> _verificarSesionYRedirigirPerfil(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
@@ -103,21 +100,16 @@ class _TiposScreenState extends State<TiposScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF031A2E), // Color exacto de fondo
+      backgroundColor: const Color(0xFF031A2E),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF063B5D), // Color exacto de barra superior
+        backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // Botón de Inicio (Home) con validación
           IconButton(
             onPressed: () => _verificarSesionYRedirigirHome(context),
             icon: const Icon(Icons.home_outlined, color: Colors.white, size: 26),
           ),
-          
-          // 🚫 EL CARRITO HA SIDO REMOVIDO DE ESTA PANTALLA A PROPÓSITO
-          
-          // Botón de Usuario / Perfil con validación de sesión
           IconButton(
             onPressed: () => _verificarSesionYRedirigirPerfil(context),
             icon: const Icon(
@@ -135,9 +127,9 @@ class _TiposScreenState extends State<TiposScreen> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-            Text(
+            const Text(
               'Tipos',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Georgia',
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -161,18 +153,16 @@ class _TiposScreenState extends State<TiposScreen> {
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: InkWell(
                       onTap: () {
-                        // Navegación según el tipo seleccionado
-                        if (tipo == 'Importadas') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ImportadasScreen()),
-                          );
-                        } else if (tipo == 'Nacionales') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const NacionalesScreen()),
-                          );
-                        }
+                        // Navegamos enviando la categoría y el tipo seleccionado
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProductosPorTipoScreen(
+                              categoria: widget.categoria,
+                              tipo: tipo,
+                            ),
+                          ),
+                        );
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(

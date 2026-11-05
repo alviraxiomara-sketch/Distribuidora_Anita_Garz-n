@@ -10,14 +10,21 @@ import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/tipos_catalogo.dart';
 
-class NacionalesScreen extends StatefulWidget {
-  const NacionalesScreen({super.key});
+class ProductosPorTipoScreen extends StatefulWidget {
+  final String categoria; 
+  final String tipo;      
+
+  const ProductosPorTipoScreen({
+    super.key,
+    required this.categoria,
+    required this.tipo,
+  });
 
   @override
-  State<NacionalesScreen> createState() => _NacionalesScreenState();
+  State<ProductosPorTipoScreen> createState() => _ProductosPorTipoScreenState();
 }
 
-class _NacionalesScreenState extends State<NacionalesScreen> {
+class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
   bool _cargando = true;
   bool _cargandoProductos = true;
   List<dynamic> _categoriasList = [];
@@ -44,15 +51,8 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
 
       if (res.statusCode == 200 && mounted) {
         final decoded = jsonDecode(res.body);
-        List<dynamic> lista = [];
-        if (decoded is List) {
-          lista = decoded;
-        } else if (decoded is Map) {
-          var temp = decoded['categorias'] ?? decoded['data'] ?? [];
-          if (temp is List) lista = temp;
-        }
         setState(() {
-          _categoriasList = lista;
+          _categoriasList = decoded is List ? decoded : [];
         });
       }
     } catch (_) {
@@ -69,16 +69,21 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
 
+      // Enviamos la categoría y el tipo como parámetros de consulta (queryParameters)
+      final uri = Uri.parse('${ApiConfig.baseUrl}/productos').replace(
+        queryParameters: {
+          'categoria': widget.categoria,
+          'tipo': widget.tipo,
+        },
+      );
+
       final res = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/productos'),
+        uri,
         headers: {
           ...ApiConfig.headers,
           if (token != null) 'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 20));
-
-      print('ESTATUS RESPUESTA PRODUCTOS: ${res.statusCode}');
-      print('CUERPO DE LA RESPUESTA PRODUCTOS: ${res.body}');
 
       if (res.statusCode == 200 && mounted) {
         final decoded = jsonDecode(res.body);
@@ -88,13 +93,10 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
           lista = decoded;
         } else if (decoded is Map) {
           var temp = decoded['productos'] ?? decoded['data'] ?? [];
-          if (temp is List) {
-            lista = temp;
-          }
+          if (temp is List) lista = temp;
         }
 
         setState(() {
-          // Asignamos la lista completa para verificar que se pinten correctamente en la pantalla
           _productosList = lista;
           _cargandoProductos = false;
         });
@@ -102,7 +104,6 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
         setState(() => _cargandoProductos = false);
       }
     } catch (e) {
-      print('ERROR DE CONEXIÓN PRODUCTOS: $e');
       if (mounted) {
         setState(() => _cargandoProductos = false);
       }
@@ -151,7 +152,8 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final productosSeguros = _productosList;
+    // Título dinámico combinado (Ej: "Licores Nacionales", "Cervezas Importadas")[cite: 8]
+    final tituloDinamico = '${widget.categoria} ${widget.tipo}';
 
     return Scaffold(
       backgroundColor: const Color(0xFF031A2E),
@@ -196,14 +198,15 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-            const Text(
-              'Cervezas Nacionales',
-              style: TextStyle(
+            Text(
+              tituloDinamico, // Muestra el título combinado automáticamente[cite: 8]
+              style: const TextStyle(
                 fontFamily: 'Georgia',
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             Expanded(
@@ -219,7 +222,7 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
                 ),
                 child: _cargandoProductos
                     ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
-                    : productosSeguros.isEmpty
+                    : _productosList.isEmpty
                         ? const Center(
                             child: Text(
                               'No hay productos registrados en esta categoría',
@@ -228,9 +231,9 @@ class _NacionalesScreenState extends State<NacionalesScreen> {
                             ),
                           )
                         : ListView.builder(
-                            itemCount: productosSeguros.length,
+                            itemCount: _productosList.length,
                             itemBuilder: (context, index) {
-                              final producto = productosSeguros[index];
+                              final producto = _productosList[index];
                               final nombreProducto = producto != null && producto is Map 
                                   ? (producto['nombre'] ?? producto['Nombre'] ?? 'Sin nombre')
                                   : 'Sin nombre';
