@@ -8,7 +8,7 @@ import 'package:frontend/screens/home.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
-import 'package:frontend/widgets/tipos_catalogo.dart';
+import 'package:frontend/widgets/producto_card.dart'; // <--- Importamos el nuevo widget
 
 class ProductosPorTipoScreen extends StatefulWidget {
   final String categoria; 
@@ -69,10 +69,8 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
 
-      // Enviamos la categoría y el tipo como parámetros de consulta (queryParameters)
       final uri = Uri.parse('${ApiConfig.baseUrl}/productos').replace(
         queryParameters: {
-          'categoria': widget.categoria,
           'tipo': widget.tipo,
         },
       );
@@ -96,8 +94,14 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
           if (temp is List) lista = temp;
         }
 
+        final listaFiltrada = lista.where((prod) {
+          if (prod == null || prod is! Map) return false;
+          final tipoProd = prod['tipo']?.toString().trim().toLowerCase() ?? '';
+          return tipoProd == widget.tipo.trim().toLowerCase();
+        }).toList();
+
         setState(() {
-          _productosList = lista;
+          _productosList = listaFiltrada;
           _cargandoProductos = false;
         });
       } else {
@@ -152,7 +156,6 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Título dinámico combinado (Ej: "Licores Nacionales", "Cervezas Importadas")[cite: 8]
     final tituloDinamico = '${widget.categoria} ${widget.tipo}';
 
     return Scaffold(
@@ -199,7 +202,7 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
           children: [
             const SizedBox(height: 10),
             Text(
-              tituloDinamico, // Muestra el título combinado automáticamente[cite: 8]
+              tituloDinamico,
               style: const TextStyle(
                 fontFamily: 'Georgia',
                 fontSize: 24,
@@ -234,14 +237,17 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
                             itemCount: _productosList.length,
                             itemBuilder: (context, index) {
                               final producto = _productosList[index];
-                              final nombreProducto = producto != null && producto is Map 
-                                  ? (producto['nombre'] ?? producto['Nombre'] ?? 'Sin nombre')
-                                  : 'Sin nombre';
 
-                              return ItemCatalogoCard(
-                                titulo: nombreProducto,
-                                onTap: () {
-                                  // Acción al presionar el producto
+                              return ProductoCard(
+                                nombre: producto['nombre'] ?? 'Sin nombre',
+                                precioDetal: producto['precio_detal'] != null 
+                                    ? "\$${producto['precio_detal']}" 
+                                    : "\$0",
+                                presentacion: producto['presentacion'] ?? '',
+                                tapa: producto['tapa'] ?? '',
+                                imagenUrl: producto['imagen_url'] ?? '',
+                                onAgregarCarrito: () {
+                                  // Acción al agregar al carrito
                                 },
                               );
                             },
