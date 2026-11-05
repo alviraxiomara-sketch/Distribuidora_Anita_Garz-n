@@ -51,8 +51,10 @@ class _CartScreenState extends State<CartScreen> {
     } catch (_) {}
   }
 
-  Future<void> _cargarCarrito() async {
-    setState(() => _cargando = true);
+  Future<void> _cargarCarrito({bool mostrarLoader = true}) async {
+    if (mostrarLoader) {
+      setState(() => _cargando = true);
+    }
     try {
       final carritoData = await CarritoService.obtenerCarrito();
       setState(() {
@@ -73,7 +75,9 @@ class _CartScreenState extends State<CartScreen> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _cargando = false);
+      if (mostrarLoader && mounted) {
+        setState(() => _cargando = false);
+      }
     }
   }
 
@@ -82,13 +86,20 @@ class _CartScreenState extends State<CartScreen> {
     final nuevaCantidad = item['cantidad'] + delta;
     if (nuevaCantidad <= 0) return;
 
+    setState(() {
+      _detallesCarrito[index]['cantidad'] = nuevaCantidad;
+      final precio = (_detallesCarrito[index]['precio_unitario'] as num).toDouble();
+      _detallesCarrito[index]['subtotal'] = precio * nuevaCantidad;
+    });
+
     try {
       await CarritoService.actualizarCantidad(
         item['id_detalle_carrito'],
         nuevaCantidad,
       );
-      _cargarCarrito();
+      _cargarCarrito(mostrarLoader: false);
     } catch (e) {
+      _cargarCarrito(mostrarLoader: false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -100,10 +111,16 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _eliminarProducto(int index) async {
     final item = _detallesCarrito[index];
+    
+    setState(() {
+      _detallesCarrito.removeAt(index);
+    });
+
     try {
       await CarritoService.eliminarDetalle(item['id_detalle_carrito']);
-      _cargarCarrito();
+      _cargarCarrito(mostrarLoader: false);
     } catch (e) {
+      _cargarCarrito(mostrarLoader: false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -198,24 +215,18 @@ class _CartScreenState extends State<CartScreen> {
                                   final item = _detallesCarrito[index];
                                   final producto = item['productos'] ?? {};
                                   
-                                  // Extraemos los datos reales del producto
                                   final nombre = producto['nombre'] ?? 'Producto';
                                   final presentacion = producto['presentacion'] ?? '';
                                   final tapa = producto['tapa'] ?? '';
                                   final imagenUrl = producto['imagen_url'] ?? '';
 
-                                  // Armamos el texto descriptivo combinado
-                                  String detalleExtra = presentacion;
-                                  if (tapa.isNotEmpty) {
-                                    detalleExtra += ' - Tapa $tapa';
-                                  }
-
                                   return CartProductCardItem(
                                     index: index,
                                     nombre: nombre,
                                     precioUnitario: (item['precio_unitario'] as num).toDouble(),
-                                    presentacion: detalleExtra.isNotEmpty ? detalleExtra : 'Disponible',
-                                    imagenUrl: imagenUrl, // Pasamos la URL correcta de la BD
+                                    presentacion: presentacion,
+                                    tapa: tapa,
+                                    imagenUrl: imagenUrl,
                                     cantidad: item['cantidad'],
                                     seleccionado: true,
                                     onCantidadChanged: _cambiarCantidad,

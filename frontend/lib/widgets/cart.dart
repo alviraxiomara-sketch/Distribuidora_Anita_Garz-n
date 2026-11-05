@@ -5,7 +5,8 @@ class CartProductCardItem extends StatelessWidget {
   final String nombre;
   final double precioUnitario;
   final String presentacion;
-  final String imagenUrl; // <--- Actualizado para recibir la URL de la BD
+  final String tapa;
+  final String imagenUrl;
   final int cantidad;
   final bool seleccionado;
   final Function(int, int) onCantidadChanged;
@@ -18,6 +19,7 @@ class CartProductCardItem extends StatelessWidget {
     required this.nombre,
     required this.precioUnitario,
     required this.presentacion,
+    required this.tapa,
     required this.imagenUrl,
     required this.cantidad,
     required this.seleccionado,
@@ -28,7 +30,10 @@ class CartProductCardItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double subtotal = precioUnitario * cantidad;
+    String detalleTexto = presentacion;
+    if (tapa.isNotEmpty) {
+      detalleTexto += detalleTexto.isNotEmpty ? ' - Tapa $tapa' : 'Tapa $tapa';
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -44,7 +49,7 @@ class CartProductCardItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Imagen del producto desde la red (Cloudinary)
+          // Imagen del producto
           Container(
             width: 70,
             height: 70,
@@ -73,7 +78,7 @@ class CartProductCardItem extends StatelessWidget {
           ),
           const SizedBox(width: 12),
 
-          // Detalles del producto (Nombre, Precio, Presentación)
+          // Información del producto
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,10 +100,10 @@ class CartProductCardItem extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (presentacion.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                if (detalleTexto.isNotEmpty) ...[
+                  const SizedBox(height: 4),
                   Text(
-                    presentacion,
+                    detalleTexto,
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
@@ -109,82 +114,72 @@ class CartProductCardItem extends StatelessWidget {
             ),
           ),
 
-          // Control de Cantidad, Subtotal y Acciones
+          // Controles de cantidad y acciones a la derecha
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Controles de cantidad (- 1 +) y botón eliminar
-              Row(
-                children: [
-                  Container(
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0077B6),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 28),
-                          onPressed: () => onCantidadChanged(index, -1),
-                          icon: const Icon(Icons.remove, color: Colors.white, size: 16),
-                        ),
-                        Text(
-                          '$cantidad',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 28),
-                          onPressed: () => onCantidadChanged(index, 1),
-                          icon: const Icon(Icons.add, color: Colors.white, size: 16),
-                        ),
-                      ],
-                    ),
+              // Cuadro de cantidad cuadrado y más oscurito
+              Container(
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF021B2E), // Fondo más oscuro
+                  borderRadius: BorderRadius.circular(4), // Esquinas cuadradas
+                  border: Border.all(
+                    color: const Color(0xFF00A2E8),
+                    width: 1.5,
                   ),
-                  IconButton(
-                    onPressed: () => onEliminar(index),
-                    icon: const Icon(Icons.delete_outline, color: Colors.white70, size: 22),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Botón indicador de Subtotal y Checkbox
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0077B6),
-                      borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28),
+                      onPressed: () => onCantidadChanged(index, -1),
+                      icon: const Icon(Icons.remove, color: Colors.white, size: 16),
                     ),
-                    child: Text(
-                      '\$${subtotal.toStringAsFixed(0)}',
+                    Text(
+                      '$cantidad',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
                       ),
                     ),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28),
+                      onPressed: () => onCantidadChanged(index, 1),
+                      icon: const Icon(Icons.add, color: Colors.white, size: 16),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Papelera y Checkbox alineados al lado
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => onEliminar(index),
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   InkWell(
                     onTap: () => onToggleSeleccion(index),
                     child: Container(
-                      width: 22,
-                      height: 22,
+                      width: 24,
+                      height: 24,
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.white, width: 1.5),
                         borderRadius: BorderRadius.circular(4),
                         color: seleccionado ? const Color(0xFF00A2E8) : Colors.transparent,
                       ),
                       child: seleccionado
-                          ? const Icon(Icons.check, size: 16, color: Colors.white)
+                          ? const Icon(Icons.check, size: 18, color: Colors.white)
                           : null,
                     ),
                   ),
