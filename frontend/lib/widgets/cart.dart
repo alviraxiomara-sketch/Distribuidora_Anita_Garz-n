@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class CartProductCardItem extends StatelessWidget {
+class CartProductCardItem extends StatefulWidget {
   final int index;
   final String nombre;
   final double precioUnitario;
@@ -8,9 +8,9 @@ class CartProductCardItem extends StatelessWidget {
   final String tapa;
   final String imagenUrl;
   final int cantidad;
-  final bool seleccionado;
+  final bool seleccionadoInicial;
   final Function(int, int) onCantidadChanged;
-  final Function(int) onToggleSeleccion;
+  final Function(int, bool) onToggleSeleccion;
   final Function(int) onEliminar;
 
   const CartProductCardItem({
@@ -22,17 +22,30 @@ class CartProductCardItem extends StatelessWidget {
     required this.tapa,
     required this.imagenUrl,
     required this.cantidad,
-    required this.seleccionado,
+    this.seleccionadoInicial = true,
     required this.onCantidadChanged,
     required this.onToggleSeleccion,
     required this.onEliminar,
   });
 
   @override
+  State<CartProductCardItem> createState() => _CartProductCardItemState();
+}
+
+class _CartProductCardItemState extends State<CartProductCardItem> {
+  late bool _estaSeleccionado;
+
+  @override
+  void initState() {
+    super.initState();
+    _estaSeleccionado = widget.seleccionadoInicial;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    String detalleTexto = presentacion;
-    if (tapa.isNotEmpty) {
-      detalleTexto += detalleTexto.isNotEmpty ? ' - Tapa $tapa' : 'Tapa $tapa';
+    String detalleTexto = widget.presentacion;
+    if (widget.tapa.isNotEmpty) {
+      detalleTexto += detalleTexto.isNotEmpty ? ' - Tapa ${widget.tapa}' : 'Tapa ${widget.tapa}';
     }
 
     return Container(
@@ -59,9 +72,9 @@ class CartProductCardItem extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: imagenUrl.isNotEmpty
+              child: widget.imagenUrl.isNotEmpty
                   ? Image.network(
-                      imagenUrl,
+                      widget.imagenUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.local_drink,
@@ -84,7 +97,7 @@ class CartProductCardItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  nombre.toUpperCase(),
+                  widget.nombre.toUpperCase(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -93,7 +106,7 @@ class CartProductCardItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '\$${precioUnitario.toStringAsFixed(0)}',
+                  '\$${widget.precioUnitario.toStringAsFixed(0)}',
                   style: const TextStyle(
                     color: Color(0xFF00A8FF),
                     fontSize: 14,
@@ -114,17 +127,17 @@ class CartProductCardItem extends StatelessWidget {
             ),
           ),
 
-          // Controles de cantidad y acciones a la derecha
+          // Controles de cantidad y acciones
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Cuadro de cantidad cuadrado y más oscurito
+              // Cuadro de cantidad cuadrado y oscuro
               Container(
                 height: 32,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF021B2E), // Fondo más oscuro
-                  borderRadius: BorderRadius.circular(4), // Esquinas cuadradas
+                  color: const Color(0xFF021B2E),
+                  borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: const Color(0xFF00A2E8),
                     width: 1.5,
@@ -136,11 +149,11 @@ class CartProductCardItem extends StatelessWidget {
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(minWidth: 28),
-                      onPressed: () => onCantidadChanged(index, -1),
+                      onPressed: () => widget.onCantidadChanged(widget.index, -1),
                       icon: const Icon(Icons.remove, color: Colors.white, size: 16),
                     ),
                     Text(
-                      '$cantidad',
+                      '${widget.cantidad}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -149,7 +162,7 @@ class CartProductCardItem extends StatelessWidget {
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(minWidth: 28),
-                      onPressed: () => onCantidadChanged(index, 1),
+                      onPressed: () => widget.onCantidadChanged(widget.index, 1),
                       icon: const Icon(Icons.add, color: Colors.white, size: 16),
                     ),
                   ],
@@ -157,28 +170,38 @@ class CartProductCardItem extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // Papelera y Checkbox alineados al lado
+              // Papelera y Checkbox interactivo
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    onPressed: () => onEliminar(index),
+                    onPressed: () => widget.onEliminar(widget.index),
                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
                   ),
                   const SizedBox(width: 12),
                   InkWell(
-                    onTap: () => onToggleSeleccion(index),
-                    child: Container(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () {
+                      setState(() {
+                        _estaSeleccionado = !_estaSeleccionado;
+                      });
+                      widget.onToggleSeleccion(widget.index, _estaSeleccionado);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
                       width: 24,
                       height: 24,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(
+                          color: _estaSeleccionado ? const Color(0xFF00A2E8) : Colors.white70,
+                          width: 1.5,
+                        ),
                         borderRadius: BorderRadius.circular(4),
-                        color: seleccionado ? const Color(0xFF00A2E8) : Colors.transparent,
+                        color: _estaSeleccionado ? const Color(0xFF00A2E8) : Colors.transparent,
                       ),
-                      child: seleccionado
+                      child: _estaSeleccionado
                           ? const Icon(Icons.check, size: 18, color: Colors.white)
                           : null,
                     ),

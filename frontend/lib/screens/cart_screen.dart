@@ -5,11 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/login.dart';
 import 'package:frontend/screens/principal_cliente.dart';
 import 'package:frontend/screens/profile.dart';
+import 'package:frontend/screens/checkout_screen.dart';
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/services/carrito_service.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/cart_bottom_bar.dart';
-import 'package:frontend/widgets/cart.dart';
+import 'package:frontend/widgets/cart_product_list.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -52,13 +53,18 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _cargarCarrito({bool mostrarLoader = true}) async {
-    if (mostrarLoader) {
-      setState(() => _cargando = true);
-    }
+    if (mostrarLoader) setState(() => _cargando = true);
     try {
       final carritoData = await CarritoService.obtenerCarrito();
+      final items = carritoData['detalle_carrito'] ?? [];
+      
+      // Inicializamos todos como seleccionados por defecto
+      for (var item in items) {
+        item['seleccionado'] = item['seleccionado'] ?? true;
+      }
+
       setState(() {
-        _detallesCarrito = carritoData['detalle_carrito'] ?? [];
+        _detallesCarrito = items;
       });
     } on NoSesionException {
       if (!mounted) return;
@@ -68,16 +74,9 @@ class _CartScreenState extends State<CartScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _mostrarMensaje(e.toString().replaceAll('Exception: ', ''), Colors.red);
     } finally {
-      if (mostrarLoader && mounted) {
-        setState(() => _cargando = false);
-      }
+      if (mostrarLoader && mounted) setState(() => _cargando = false);
     }
   }
 
@@ -93,50 +92,48 @@ class _CartScreenState extends State<CartScreen> {
     });
 
     try {
-      await CarritoService.actualizarCantidad(
-        item['id_detalle_carrito'],
-        nuevaCantidad,
-      );
+      await CarritoService.actualizarCantidad(item['id_detalle_carrito'], nuevaCantidad);
       _cargarCarrito(mostrarLoader: false);
     } catch (e) {
       _cargarCarrito(mostrarLoader: false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _mostrarMensaje(e.toString().replaceAll('Exception: ', ''), Colors.red);
     }
   }
 
   Future<void> _eliminarProducto(int index) async {
     final item = _detallesCarrito[index];
-    
-    setState(() {
-      _detallesCarrito.removeAt(index);
-    });
+    setState(() => _detallesCarrito.removeAt(index));
 
     try {
       await CarritoService.eliminarDetalle(item['id_detalle_carrito']);
       _cargarCarrito(mostrarLoader: false);
     } catch (e) {
       _cargarCarrito(mostrarLoader: false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _mostrarMensaje(e.toString().replaceAll('Exception: ', ''), Colors.red);
     }
   }
 
+  // 👈 Método para actualizar el estado de selección de un producto y recalcular el total
+  void _toggleSeleccion(int index, bool seleccionado) {
+    setState(() {
+      _detallesCarrito[index]['seleccionado'] = seleccionado;
+    });
+  }
+
+  void _mostrarMensaje(String texto, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(texto), backgroundColor: color),
+    );
+  }
+
+  // 👈 El total solo suma los productos cuyo 'seleccionado' sea true
   double get _totalPagar {
     return _detallesCarrito.fold(0.0, (sum, item) {
+      final bool seleccionado = item['seleccionado'] ?? true;
+      if (!seleccionado) return sum;
+
       final subtotal = item['subtotal'] ?? 0;
-      return sum +
-          (subtotal is num
-              ? subtotal.toDouble()
-              : double.parse(subtotal.toString()));
+      return sum + (subtotal is num ? subtotal.toDouble() : double.parse(subtotal.toString()));
     });
   }
 
@@ -162,28 +159,19 @@ class _CartScreenState extends State<CartScreen> {
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
-            icon: const Icon(
-              Icons.account_circle_outlined,
-              color: Colors.white,
-              size: 26,
-            ),
+            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 8),
         ],
       ),
       drawer: AppDrawer(categorias: _categoriasList),
       body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF00A8FF)),
-            )
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
           : Column(
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 20,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     child: Column(
                       children: [
                         const Text(
@@ -196,45 +184,12 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                         ),
                         const SizedBox(height: 25),
-                        _detallesCarrito.isEmpty
-                            ? const Padding(
-                                padding: EdgeInsets.only(top: 40),
-                                child: Text(
-                                  'Tu carrito está vacío',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _detallesCarrito.length,
-                                itemBuilder: (context, index) {
-                                  final item = _detallesCarrito[index];
-                                  final producto = item['productos'] ?? {};
-                                  
-                                  final nombre = producto['nombre'] ?? 'Producto';
-                                  final presentacion = producto['presentacion'] ?? '';
-                                  final tapa = producto['tapa'] ?? '';
-                                  final imagenUrl = producto['imagen_url'] ?? '';
-
-                                  return CartProductCardItem(
-                                    index: index,
-                                    nombre: nombre,
-                                    precioUnitario: (item['precio_unitario'] as num).toDouble(),
-                                    presentacion: presentacion,
-                                    tapa: tapa,
-                                    imagenUrl: imagenUrl,
-                                    cantidad: item['cantidad'],
-                                    seleccionado: true,
-                                    onCantidadChanged: _cambiarCantidad,
-                                    onToggleSeleccion: (_) {},
-                                    onEliminar: _eliminarProducto,
-                                  );
-                                },
-                              ),
+                        CartProductList(
+                          detallesCarrito: _detallesCarrito,
+                          onCantidadChanged: _cambiarCantidad,
+                          onToggleSeleccion: _toggleSeleccion, // 👈 Conectado aquí
+                          onEliminar: _eliminarProducto,
+                        ),
                       ],
                     ),
                   ),
@@ -243,10 +198,23 @@ class _CartScreenState extends State<CartScreen> {
                   totalPagar: _totalPagar,
                   isEmpty: _detallesCarrito.isEmpty,
                   onIniciarCompra: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Procesando compra...'),
-                        backgroundColor: Color.fromARGB(255, 72, 180, 230),
+                    // 👈 Filtramos para enviar solo los productos que tengan el chulito marcado
+                    final productosSeleccionados = _detallesCarrito
+                        .where((item) => item['seleccionado'] == true)
+                        .toList();
+
+                    if (productosSeleccionados.isEmpty) {
+                      _mostrarMensaje('Selecciona al menos un producto para continuar', Colors.red);
+                      return;
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CheckoutScreen(
+                          productosSeleccionados: productosSeleccionados,
+                          totalPagar: _totalPagar,
+                        ),
                       ),
                     );
                   },
