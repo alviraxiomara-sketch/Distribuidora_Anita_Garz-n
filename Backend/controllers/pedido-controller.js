@@ -1,8 +1,8 @@
 import { supabase } from "../config/supabase.js";
-import { enviarCodigoVerificacion } from "../services/notificacion-service.js";
+import { enviarCorreoPedidoExitoso } from "../services/notificacion-service.js";
 
 // ==========================
-// MODELOS AUXILIARES (O si los tienes en pedido-model.js)
+// MODELOS AUXILIARES
 // ==========================
 const crearPedido = async (pedido) => {
     const { data, error } = await supabase
@@ -271,21 +271,46 @@ export const crear = async (req, res) => {
         }
 
         // ==========================
-        // NOTIFICACIÓN PARA ADMINISTRADOR
+        // NOTIFICACIONES Y CORREO
         // ==========================
+
+        // 1. Notificación para el cliente en su panel
         await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
-            mensaje: `Nuevo pedido #${nuevoPedido.id_pedido} registrado por valor de $${total} (${metodo_pago || 'Normal'})`,
-            tipo: 'PEDIDO',
-            leido: false
+            titulo: "¡Pedido Realizado!",
+            mensaje: `Tu pedido #${nuevoPedido.id_pedido} ha sido registrado con éxito.`,
+            leida: false
         }]);
 
-        // ENVIAR CORREO
-        await enviarCodigoVerificacion(
-            req.usuario.correo,
-            req.usuario.nombre,
-            "Pedido recibido"
-        );
+        // 2. Notificación para el administrador en su panel (buscando rol 'ADMIN' o 'admin')
+        const { data: adminUsers } = await supabase
+            .from("usuarios")
+            .select("id_usuario")
+            .or("rol.eq.ADMIN,rol.eq.admin");
+
+        if (adminUsers && adminUsers.length > 0) {
+            for (const admin of adminUsers) {
+                await supabase.from("notificaciones").insert([{
+                    id_usuario: admin.id_usuario,
+                    titulo: "Nuevo Pedido Recibido",
+                    mensaje: `Nuevo pedido #${nuevoPedido.id_pedido} de ${req.usuario.nombre} por valor de $${total}`,
+                    leida: false
+                }]);
+            }
+        }
+
+        // 3. Enviar correo electrónico formal de confirmación al cliente
+        try {
+            await enviarCorreoPedidoExitoso(
+                req.usuario.correo,
+                req.usuario.nombre,
+                nuevoPedido.id_pedido,
+                total,
+                metodo_pago || 'Normal'
+            );
+        } catch (mailError) {
+            console.error("Error al enviar el correo de confirmación:", mailError);
+        }
 
         return res.status(201).json({
             mensaje: "Pedido creado correctamente",
