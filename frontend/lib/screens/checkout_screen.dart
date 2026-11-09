@@ -34,7 +34,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _direccionController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
 
-  String? _metodoPago; // Inicia vacío en null
+  String? _metodoPago; // Inicia nulo para aparecer vacío
   File? _comprobanteImagen;
   Uint8List? _comprobanteBytes;
   bool _procesando = false;
@@ -113,37 +113,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
 
-      final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
-      var request = http.MultipartRequest('POST', url);
-      
-      request.headers.addAll({
-        if (token != null) 'Authorization': 'Bearer $token',
-      });
-
-      request.fields['nombre'] = _nombreController.text;
-      request.fields['direccion'] = _direccionController.text;
-      request.fields['telefono'] = _telefonoController.text;
-      request.fields['metodo_pago'] = _metodoPago!;
-      request.fields['total'] = widget.totalPagar.toString();
-      request.fields['productos'] = jsonEncode(widget.productosSeleccionados);
-
-      if (_metodoPago == 'Nequi') {
-        if (kIsWeb && _comprobanteBytes != null) {
-          request.files.add(http.MultipartFile.fromBytes(
-            'comprobante',
-            _comprobanteBytes!,
-            filename: 'comprobante_nequi.jpg',
-          ));
-        } else if (!kIsWeb && _comprobanteImagen != null) {
-          request.files.add(await http.MultipartFile.fromPath(
-            'comprobante',
-            _comprobanteImagen!.path,
-          ));
-        }
+      if (token == null || token.isEmpty) {
+        throw Exception('No has iniciado sesión');
       }
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+      final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
+      
+      // Enviamos la petición directamente a tu backend Node.js
+      final response = await http.post(
+        url,
+        headers: {
+          ...ApiConfig.headers,
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'direccion_entrega': _direccionController.text,
+          'telefono_contacto': _telefonoController.text,
+          'metodo_pago': _metodoPago,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (!mounted) return;
@@ -161,13 +151,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           (route) => false,
         );
       } else {
-        throw Exception('Error en el servidor: ${response.body}');
+        throw Exception(responseData['error'] ?? 'Error al procesar el pedido');
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al procesar el pedido: $e'),
+          content: Text('Error: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -238,7 +228,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Lista detallada de productos
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -292,7 +281,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
               const SizedBox(height: 10),
               
-              // Total general
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
@@ -314,7 +302,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
               const SizedBox(height: 16),
 
-              // Campos del formulario
               CheckoutFormFields(
                 nombreController: _nombreController,
                 direccionController: _direccionController,
@@ -327,7 +314,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 },
               ),
 
-              // Sección condicional Nequi
               if (_metodoPago == 'Nequi')
                 CheckoutNequiSection(
                   comprobanteImagen: _comprobanteImagen,
@@ -337,7 +323,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
               const SizedBox(height: 25),
 
-              // Botón Realizar Pedido
               ElevatedButton(
                 onPressed: _procesando ? null : _realizarPedido,
                 style: ElevatedButton.styleFrom(

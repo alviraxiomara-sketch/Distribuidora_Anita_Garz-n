@@ -9,7 +9,7 @@ class NoSesionException implements Exception {
 }
 
 class CarritoService {
-  static Future<Map<String, String>> _getHeaders() async {
+  static Future _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
@@ -23,8 +23,8 @@ class CarritoService {
     };
   }
 
-  // 1. Obtener los productos del carrito desde el backend
-  static Future<Map<String, dynamic>> obtenerCarrito() async {
+  // 1. Obtener los productos del carrito
+  static Future obtenerCarrito() async {
     final headers = await _getHeaders();
     final url = Uri.parse('${ApiConfig.baseUrl}/carrito');
 
@@ -44,7 +44,7 @@ class CarritoService {
     required int cantidad,
   }) async {
     final headers = await _getHeaders();
-    final url = Uri.parse('${ApiConfig.baseUrl}/carrito/agregar');
+    final url = Uri.parse('${ApiConfig.baseUrl}/carrito');
 
     final response = await http.post(
       url,

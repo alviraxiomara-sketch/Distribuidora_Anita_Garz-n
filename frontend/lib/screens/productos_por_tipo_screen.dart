@@ -6,6 +6,7 @@ import 'package:frontend/screens/login.dart';
 import 'package:frontend/screens/principal_cliente.dart';
 import 'package:frontend/screens/home.dart';
 import 'package:frontend/screens/profile.dart';
+import 'package:frontend/screens/cart_screen.dart'; // 👈 Importamos la pantalla del carrito
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/producto_card.dart';
@@ -152,7 +153,6 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
 
       if (!mounted) return;
 
-      // Validamos si el backend aceptó el registro en el carrito (200 o 201)
       if (res.statusCode == 200 || res.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -162,7 +162,6 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
           ),
         );
       } else {
-        // Mostramos el mensaje exacto que devuelva el servidor de Render si ocurre un error
         String mensajeBackend = 'Error (${res.statusCode})';
         try {
           final decoded = jsonDecode(res.body);
@@ -231,6 +230,26 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
     }
   }
 
+  // 🛒 Verificación de sesión para redirigir al carrito o al login
+  Future<void> _verificarSesionYRedirigirCarrito(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (!context.mounted) return;
+
+    if (token != null && token.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CartScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tituloDinamico = '${widget.categoria} ${widget.tipo}';
@@ -265,6 +284,15 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
             onPressed: () => _verificarSesionYRedirigirPerfil(context),
             icon: const Icon(
               Icons.account_circle_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          // 🛒 Icono del carrito añadido aquí
+          IconButton(
+            onPressed: () => _verificarSesionYRedirigirCarrito(context),
+            icon: const Icon(
+              Icons.shopping_cart_outlined,
               color: Colors.white,
               size: 26,
             ),

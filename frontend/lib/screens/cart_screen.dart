@@ -55,10 +55,10 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _cargarCarrito({bool mostrarLoader = true}) async {
     if (mostrarLoader) setState(() => _cargando = true);
     try {
+      // Aquí se llama correctamente sin los paréntesis en CarritoService
       final carritoData = await CarritoService.obtenerCarrito();
       final items = carritoData['detalle_carrito'] ?? [];
       
-      // Inicializamos todos como seleccionados por defecto
       for (var item in items) {
         item['seleccionado'] = item['seleccionado'] ?? true;
       }
@@ -113,7 +113,6 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  // 👈 Método para actualizar el estado de selección de un producto y recalcular el total
   void _toggleSeleccion(int index, bool seleccionado) {
     setState(() {
       _detallesCarrito[index]['seleccionado'] = seleccionado;
@@ -126,7 +125,6 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // 👈 El total solo suma los productos cuyo 'seleccionado' sea true
   double get _totalPagar {
     return _detallesCarrito.fold(0.0, (sum, item) {
       final bool seleccionado = item['seleccionado'] ?? true;
@@ -187,7 +185,7 @@ class _CartScreenState extends State<CartScreen> {
                         CartProductList(
                           detallesCarrito: _detallesCarrito,
                           onCantidadChanged: _cambiarCantidad,
-                          onToggleSeleccion: _toggleSeleccion, // 👈 Conectado aquí
+                          onToggleSeleccion: _toggleSeleccion,
                           onEliminar: _eliminarProducto,
                         ),
                       ],
@@ -198,7 +196,6 @@ class _CartScreenState extends State<CartScreen> {
                   totalPagar: _totalPagar,
                   isEmpty: _detallesCarrito.isEmpty,
                   onIniciarCompra: () {
-                    // 👈 Filtramos para enviar solo los productos que tengan el chulito marcado
                     final productosSeleccionados = _detallesCarrito
                         .where((item) => item['seleccionado'] == true)
                         .toList();
