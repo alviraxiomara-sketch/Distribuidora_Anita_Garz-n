@@ -1,24 +1,40 @@
 import { supabase } from "../config/supabase.js";
 import { enviarCorreoPedidoExitoso } from "../services/notificacion-service.js";
 
-// Función auxiliar para subir el comprobante a Supabase Storage
+// Función auxiliar mejorada para asegurar la subida y retorno de la URL del comprobante
 const subirComprobanteAStorage = async (base64Data) => {
-    if (!base64Data || !base64Data.startsWith('data:image')) return base64Data;
+    if (!base64Data) return null;
+
+    // Si ya es una URL web válida, la retorna directamente
+    if (base64Data.startsWith('http://') || base64Data.startsWith('https://')) {
+        return base64Data;
+    }
 
     try {
-        const base64Image = base64Data.split(';base64,').pop();
-        const buffer = Buffer.from(base64Image, 'base64');
+        let buffer;
+        let contentType = 'image/jpeg';
+
+        if (base64Data.startsWith('data:image')) {
+            const arr = base64Data.split(',');
+            const mimeMatch = arr[0].match(/:(.*?);/);
+            if (mimeMatch) contentType = mimeMatch[1];
+            buffer = Buffer.from(arr[1], 'base64');
+        } else {
+            // Si viene en Base64 puro sin el prefijo data:image
+            buffer = Buffer.from(base64Data, 'base64');
+        }
+
         const fileName = `comprobante_${Date.now()}.jpg`;
 
-        const { error } = await supabase.storage
+        const { error: errorStorage } = await supabase.storage
             .from('comprobantes')
             .upload(fileName, buffer, {
-                contentType: 'image/jpeg',
+                contentType,
                 upsert: true
             });
 
-        if (error) {
-            console.error("Error al subir a Supabase Storage:", error.message);
+        if (errorStorage) {
+            console.error("❌ Error al subir a Supabase Storage:", errorStorage.message);
             return null;
         }
 
@@ -26,9 +42,10 @@ const subirComprobanteAStorage = async (base64Data) => {
             .from('comprobantes')
             .getPublicUrl(fileName);
 
+        console.log("✅ Comprobante subido con éxito. URL:", publicUrlData.publicUrl);
         return publicUrlData.publicUrl;
     } catch (err) {
-        console.error("Error procesando imagen:", err);
+        console.error("❌ Excepción procesando la imagen del comprobante:", err);
         return null;
     }
 };
@@ -42,14 +59,10 @@ export const crear = async (req, res) => {
             return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
         }
 
-        // 1. Procesar comprobante si viene en base64
+        // 1. Procesar comprobante de forma segura
         let urlComprobanteFinal = null;
         if (comprobante_url) {
-            if (comprobante_url.startsWith('data:image')) {
-                urlComprobanteFinal = await subirComprobanteAStorage(comprobante_url);
-            } else {
-                urlComprobanteFinal = comprobante_url;
-            }
+            urlComprobanteFinal = await subirComprobanteAStorage(comprobante_url);
         }
 
         // 2. Obtener y validar el carrito del usuario
@@ -133,26 +146,24 @@ export const crear = async (req, res) => {
             return res.status(500).json({ error: errorPedido.message });
         }
 
-       // 4. Registrar pago (forzando minúsculas para evitar el error de la regla chk_metodo_pago)
+        // 4. Registrar pago asegurando la URL del comprobante y minúsculas en el método
         const metodoPagoLimpio = (metodo_pago || "nequi").toLowerCase();
 
-        const { data: pagoInsertado, error: errorPago } = await supabase
+        const { error: errorPago } = await supabase
             .from("pagos")
             .insert([{
                 id_pedido: nuevoPedido.id_pedido,
-                metodo_pago: metodoPagoLimpio, // <-- Se envía en minúsculas ("nequi")
+                metodo_pago: metodoPagoLimpio,
                 valor: total,
                 estado: "PENDIENTE",
-                comprobante: urlComprobanteFinal,
+                comprobante: urlComprobanteFinal, // <--- Aquí se guarda la URL pública correctamente
                 fecha_pago: new Date().toISOString()
-            }])
-            .select();
+            }]);
 
         if (errorPago) {
             console.error("❌ ERROR AL INSERTAR EN PAGOS:", errorPago.message);
             return res.status(500).json({ error: `Error en pagos: ${errorPago.message}` });
         }
-       
 
         // 5. Insertar detalles del pedido
         for (const detalle of detallesValidados) {
@@ -188,7 +199,7 @@ export const crear = async (req, res) => {
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // 8. Notificaciones para administradores (INCLUYENDO ID DEL PEDIDO Y TEXTO CON #ID)
+        // 8. Notificaciones para administradores (Incluyendo comprobante y ID de pedido)
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
@@ -200,10 +211,10 @@ export const crear = async (req, res) => {
             for (const admin of adminUsers) {
                 await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
-                    id_pedido: nuevoPedido.id_pedido, // <--- Vinculación directa del ID
+                    id_pedido: nuevoPedido.id_pedido,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeAdmin,
-                    comprobante: urlComprobanteFinal, // <--- URL de la imagen guardada
+                    comprobante: urlComprobanteFinal, // <--- URL de la imagen en la notificación del admin
                     leida: false
                 }]);
             }
