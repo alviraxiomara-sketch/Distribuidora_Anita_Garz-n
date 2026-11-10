@@ -97,7 +97,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    if (_metodoPago == 'Nequi' && _comprobanteImagen == null && _comprobanteBytes == null) {
+    final esNequi = _metodoPago!.toLowerCase() == 'nequi';
+
+    if (esNequi && _comprobanteImagen == null && _comprobanteBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor adjunta el comprobante de pago de Nequi'),
@@ -119,7 +121,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       String? comprobanteBase64;
 
-      if (_metodoPago == 'Nequi') {
+      // =========================================================================
+      // CORRECCIÓN: CONVERSIÓN FLEXIBLE A BASE64 (MAYÚSCULAS/MINÚSCULAS)
+      // =========================================================================
+      if (esNequi) {
         if (kIsWeb && _comprobanteBytes != null) {
           comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(_comprobanteBytes!)}';
         } else if (_comprobanteImagen != null) {
@@ -127,6 +132,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
         }
       }
+
+      print('DEBUG - Método de Pago: $_metodoPago');
+      print('DEBUG - ¿Se generó Base64 del comprobante?: ${comprobanteBase64 != null}');
 
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
       
@@ -141,7 +149,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'direccion_entrega': _direccionController.text,
           'telefono_contacto': _telefonoController.text,
           'metodo_pago': _metodoPago,
-          'comprobante_url': comprobanteBase64,
+          'comprobante_url': comprobanteBase64, // <--- Envío directo del Base64
         }),
       );
 
@@ -290,9 +298,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 },
               ),
 
-              // =========================================================================
-              // NUEVA TARJETA: TOTAL A PAGAR DE LOS PRODUCTOS SELECCIONADOS
-              // =========================================================================
+              // TARJETA DEL TOTAL A PAGAR
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -344,7 +350,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 },
               ),
 
-              if (_metodoPago == 'Nequi')
+              if (_metodoPago != null && _metodoPago!.toLowerCase() == 'nequi')
                 CheckoutNequiSection(
                   comprobanteImagen: _comprobanteImagen,
                   comprobanteBytes: _comprobanteBytes,

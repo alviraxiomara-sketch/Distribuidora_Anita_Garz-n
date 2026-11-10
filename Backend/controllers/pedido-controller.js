@@ -1,14 +1,15 @@
 import { supabase } from "../config/supabase.js";
 import { enviarCorreoPedidoExitoso } from "../services/notificacion-service.js";
 
-// Función auxiliar corregida para subir correctamente a Supabase Storage desde Node.js
+// Función auxiliar con depuración extrema para Supabase Storage
 const subirComprobanteAStorage = async (base64Data) => {
     if (!base64Data) {
-        console.log("⚠️ No se proporcionó ninguna imagen de comprobante.");
+        console.log("⚠️ [Storage] No se proporcionó ninguna cadena de comprobante.");
         return null;
     }
 
     if (base64Data.startsWith('http://') || base64Data.startsWith('https://')) {
+        console.log("ℹ️ [Storage] El comprobante ya es una URL web:", base64Data);
         return base64Data;
     }
 
@@ -16,8 +17,8 @@ const subirComprobanteAStorage = async (base64Data) => {
         let buffer;
         let contentType = 'image/jpeg';
 
-        if (base64Data.startsWith('data:image')) {
-            const arr = base64Data.split(',');
+        if (base64Data.includes(';base64,')) {
+            const arr = base64Data.split(';base64,');
             const mimeMatch = arr[0].match(/:(.*?);/);
             if (mimeMatch) contentType = mimeMatch[1];
             buffer = Buffer.from(arr[1], 'base64');
@@ -25,13 +26,12 @@ const subirComprobanteAStorage = async (base64Data) => {
             buffer = Buffer.from(base64Data, 'base64');
         }
 
-        // Convertir el buffer a Uint8Array para compatibilidad total con Supabase Storage en Node.js
         const fileUint8Array = new Uint8Array(buffer);
         const fileName = `comprobante_${Date.now()}.jpg`;
 
-        console.log(`📤 Subiendo imagen a Supabase Storage (${fileName}), tamaño: ${fileUint8Array.length} bytes...`);
+        console.log(`📤 [Storage] Subiendo imagen al bucket 'comprobantes' (${fileName}), tamaño: ${fileUint8Array.length} bytes...`);
 
-        const { error: errorStorage } = await supabase.storage
+        const { data: uploadData, error: errorStorage } = await supabase.storage
             .from('comprobantes')
             .upload(fileName, fileUint8Array, {
                 contentType,
@@ -39,18 +39,20 @@ const subirComprobanteAStorage = async (base64Data) => {
             });
 
         if (errorStorage) {
-            console.error("❌ Error al subir a Supabase Storage:", errorStorage.message);
+            console.error("❌ [Storage] ERROR DE SUPABASE STORAGE:", errorStorage.message);
             return null;
         }
+
+        console.log("✅ [Storage] Imagen subida exitosamente a Supabase:", uploadData);
 
         const { data: publicUrlData } = supabase.storage
             .from('comprobantes')
             .getPublicUrl(fileName);
 
-        console.log("✅ Comprobante subido con éxito. URL pública:", publicUrlData.publicUrl);
+        console.log("🔗 [Storage] URL pública generada:", publicUrlData.publicUrl);
         return publicUrlData.publicUrl;
     } catch (err) {
-        console.error("❌ Excepción procesando la imagen del comprobante:", err);
+        console.error("❌ [Storage] EXCEPCIÓN CRÍTICA procesando la imagen:", err.message);
         return null;
     }
 };
@@ -60,20 +62,25 @@ export const crear = async (req, res) => {
         const id_usuario = req.usuario.id_usuario;
         const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
 
-        console.log("📥 Solicitud de pedido recibida:", {
+        console.log("📥 [Pedido] Solicitud recibida en el backend:", {
             id_usuario,
             metodo_pago,
-            tieneComprobanteUrl: !!comprobante_url
+            direccion_entrega,
+            telefono_contacto,
+            tieneComprobanteUrl: !!comprobante_url,
+            largoComprobanteUrl: comprobante_url ? comprobante_url.length : 0
         });
 
         if (!direccion_entrega || !telefono_contacto) {
             return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
         }
 
-        // 1. Procesar comprobante de forma segura
+        // 1. Procesar comprobante
         let urlComprobanteFinal = null;
         if (comprobante_url) {
             urlComprobanteFinal = await subirComprobanteAStorage(comprobante_url);
+        } else {
+            console.log("⚠️ [Pedido] Atencion: 'comprobante_url' llegó vacío o nulo desde el cliente.");
         }
 
         // 2. Obtener y validar el carrito del usuario
@@ -157,8 +164,10 @@ export const crear = async (req, res) => {
             return res.status(500).json({ error: errorPedido.message });
         }
 
-        // 4. Registrar pago asegurando la URL del comprobante y minúsculas en el método
+        // 4. Registrar pago guardando la URL del comprobante
         const metodoPagoLimpio = (metodo_pago || "nequi").toLowerCase();
+
+        console.log(`💾 [Base de Datos] Insertando en pagos -> ID Pedido: ${nuevoPedido.id_pedido}, Comprobante a guardar:`, urlComprobanteFinal);
 
         const { error: errorPago } = await supabase
             .from("pagos")
@@ -172,7 +181,7 @@ export const crear = async (req, res) => {
             }]);
 
         if (errorPago) {
-            console.error("❌ ERROR AL INSERTAR EN PAGOS:", errorPago.message);
+            console.error("❌ [Base de Datos] ERROR AL INSERTAR EN PAGOS:", errorPago.message);
             return res.status(500).json({ error: `Error en pagos: ${errorPago.message}` });
         }
 
@@ -247,6 +256,7 @@ export const crear = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("❌ [Servidor] Excepción general en crear pedido:", error);
         return res.status(500).json({ error: error.message });
     }
 };
