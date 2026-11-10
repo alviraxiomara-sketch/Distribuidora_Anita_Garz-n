@@ -1,11 +1,13 @@
 import { supabase } from "../config/supabase.js";
 import { enviarCorreoPedidoExitoso } from "../services/notificacion-service.js";
 
-// Función auxiliar mejorada para asegurar la subida y retorno de la URL del comprobante
+// Función auxiliar corregida para subir correctamente a Supabase Storage desde Node.js
 const subirComprobanteAStorage = async (base64Data) => {
-    if (!base64Data) return null;
+    if (!base64Data) {
+        console.log("⚠️ No se proporcionó ninguna imagen de comprobante.");
+        return null;
+    }
 
-    // Si ya es una URL web válida, la retorna directamente
     if (base64Data.startsWith('http://') || base64Data.startsWith('https://')) {
         return base64Data;
     }
@@ -20,15 +22,18 @@ const subirComprobanteAStorage = async (base64Data) => {
             if (mimeMatch) contentType = mimeMatch[1];
             buffer = Buffer.from(arr[1], 'base64');
         } else {
-            // Si viene en Base64 puro sin el prefijo data:image
             buffer = Buffer.from(base64Data, 'base64');
         }
 
+        // Convertir el buffer a Uint8Array para compatibilidad total con Supabase Storage en Node.js
+        const fileUint8Array = new Uint8Array(buffer);
         const fileName = `comprobante_${Date.now()}.jpg`;
+
+        console.log(`📤 Subiendo imagen a Supabase Storage (${fileName}), tamaño: ${fileUint8Array.length} bytes...`);
 
         const { error: errorStorage } = await supabase.storage
             .from('comprobantes')
-            .upload(fileName, buffer, {
+            .upload(fileName, fileUint8Array, {
                 contentType,
                 upsert: true
             });
@@ -42,7 +47,7 @@ const subirComprobanteAStorage = async (base64Data) => {
             .from('comprobantes')
             .getPublicUrl(fileName);
 
-        console.log("✅ Comprobante subido con éxito. URL:", publicUrlData.publicUrl);
+        console.log("✅ Comprobante subido con éxito. URL pública:", publicUrlData.publicUrl);
         return publicUrlData.publicUrl;
     } catch (err) {
         console.error("❌ Excepción procesando la imagen del comprobante:", err);
@@ -54,6 +59,12 @@ export const crear = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
         const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
+
+        console.log("📥 Solicitud de pedido recibida:", {
+            id_usuario,
+            metodo_pago,
+            tieneComprobanteUrl: !!comprobante_url
+        });
 
         if (!direccion_entrega || !telefono_contacto) {
             return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
@@ -156,7 +167,7 @@ export const crear = async (req, res) => {
                 metodo_pago: metodoPagoLimpio,
                 valor: total,
                 estado: "PENDIENTE",
-                comprobante: urlComprobanteFinal, // <--- Aquí se guarda la URL pública correctamente
+                comprobante: urlComprobanteFinal,
                 fecha_pago: new Date().toISOString()
             }]);
 
@@ -199,7 +210,7 @@ export const crear = async (req, res) => {
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // 8. Notificaciones para administradores (Incluyendo comprobante y ID de pedido)
+        // 8. Notificaciones para administradores
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
@@ -214,7 +225,7 @@ export const crear = async (req, res) => {
                     id_pedido: nuevoPedido.id_pedido,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeAdmin,
-                    comprobante: urlComprobanteFinal, // <--- URL de la imagen en la notificación del admin
+                    comprobante: urlComprobanteFinal,
                     leida: false
                 }]);
             }

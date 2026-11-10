@@ -119,9 +119,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       String? comprobanteBase64;
 
-      // =========================================================================
-      // CONVERTIR LA IMAGEN REAL A BASE64 PARA ENVIARLA AL BACKEND
-      // =========================================================================
       if (_metodoPago == 'Nequi') {
         if (kIsWeb && _comprobanteBytes != null) {
           comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(_comprobanteBytes!)}';
@@ -133,7 +130,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
       
-      // Enviamos el nombre, método de pago y la imagen real codificada
       final response = await http.post(
         url,
         headers: {
@@ -145,7 +141,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'direccion_entrega': _direccionController.text,
           'telefono_contacto': _telefonoController.text,
           'metodo_pago': _metodoPago,
-          'comprobante_url': comprobanteBase64, // <--- Envía el comprobante real
+          'comprobante_url': comprobanteBase64,
         }),
       );
 
@@ -294,7 +290,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 },
               ),
 
-              const SizedBox(height: 16),
+              // =========================================================================
+              // NUEVA TARJETA: TOTAL A PAGAR DE LOS PRODUCTOS SELECCIONADOS
+              // =========================================================================
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF063B5D),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00A2E8), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total a pagar:',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '\$${widget.totalPagar}',
+                      style: const TextStyle(
+                        color: Color(0xFF00A8FF),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
               CheckoutFormFields(
                 nombreController: _nombreController,
                 direccionController: _direccionController,
