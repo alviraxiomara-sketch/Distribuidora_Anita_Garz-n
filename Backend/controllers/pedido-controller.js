@@ -60,11 +60,9 @@ const actualizarEstadoPedido = async (id_pedido, estado) => {
 export const crear = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
-        const { direccion_entrega, telefono_contacto, metodo_pago } = req.body;
+        const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
 
-        // ==========================
         // VALIDAR DATOS
-        // ==========================
         if (!direccion_entrega) {
             return res.status(400).json({ error: "La dirección de entrega es obligatoria" });
         }
@@ -73,9 +71,7 @@ export const crear = async (req, res) => {
             return res.status(400).json({ error: "El teléfono de contacto es obligatorio" });
         }
 
-        // ==========================
         // OBTENER CARRITO
-        // ==========================
         const { data: carrito, error: errorCarrito } = await supabase
             .from("carrito")
             .select(`
@@ -103,9 +99,7 @@ export const crear = async (req, res) => {
             return res.status(400).json({ error: "El carrito está vacío" });
         }
 
-        // ==========================
         // VERIFICAR PRODUCTOS Y STOCK
-        // ==========================
         let total = 0;
         const detallesValidados = [];
 
@@ -179,9 +173,7 @@ export const crear = async (req, res) => {
             });
         }
 
-        // ==========================
         // CREAR PEDIDO
-        // ==========================
         const pedido = {
             id_usuario,
             direccion_entrega,
@@ -196,9 +188,7 @@ export const crear = async (req, res) => {
             return res.status(500).json({ error: errorPedido.message });
         }
 
-        // ==========================
         // CREAR DETALLES
-        // ==========================
         for (const detalle of detallesValidados) {
             const { error } = await crearDetallePedido({
                 id_pedido: nuevoPedido.id_pedido,
@@ -213,9 +203,7 @@ export const crear = async (req, res) => {
             }
         }
 
-        // ==========================
         // DESCONTAR INVENTARIO
-        // ==========================
         for (const detalle of detallesValidados) {
             const { data: inventario, error: errorInventario } = await supabase
                 .from("inventario")
@@ -258,9 +246,7 @@ export const crear = async (req, res) => {
             }
         }
 
-        // ==========================
         // VACIAR CARRITO
-        // ==========================
         const { error: errorEliminarCarrito } = await supabase
             .from("detalle_carrito")
             .delete()
@@ -282,7 +268,7 @@ export const crear = async (req, res) => {
             leida: false
         }]);
 
-        // 2. Notificación para el administrador en su panel (buscando rol 'ADMIN' o 'admin')
+        // 2. Notificación para el administrador en su panel (con imagen de comprobante opcional)
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
@@ -294,6 +280,7 @@ export const crear = async (req, res) => {
                     id_usuario: admin.id_usuario,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: `Nuevo pedido #${nuevoPedido.id_pedido} de ${req.usuario.nombre} por valor de $${total}`,
+                    imagen_url: comprobante_url || null,
                     leida: false
                 }]);
             }
@@ -388,7 +375,7 @@ export const obtenerPedido = async (req, res) => {
 };
 
 // ==========================
-// ACTUALIZAR ESTADO
+// ACTUALIZAR ESTADO (GENERAL)
 // ==========================
 export const cambiarEstado = async (req, res) => {
     try {
@@ -428,6 +415,53 @@ export const cambiarEstado = async (req, res) => {
             mensaje: "Estado del pedido actualizado correctamente",
             pedido: data
         });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+// ==========================
+// CAMBIAR ESTADO Y NOTIFICAR AL CLIENTE (APROBAR / RECHAZADO)
+// ==========================
+export const cambiarEstadoYNotificar = async (req, res) => {
+    try {
+        const { id } = req.params; // id_pedido
+        const { estado } = req.body; // "APROBADO" o "RECHAZADO"
+
+        const estadosValidos = ["APROBADO", "RECHAZADO"];
+        if (!estadosValidos.includes(estado)) {
+            return res.status(400).json({ error: "Estado inválido. Use APROBADO o RECHAZADO" });
+        }
+
+        const { data: pedido, error: errorPedido } = await obtenerPedidoPorId(id);
+        if (errorPedido || !pedido) {
+            return res.status(404).json({ error: "Pedido no encontrado" });
+        }
+
+        const nuevoEstadoPedido = estado === "APROBADO" ? "PREPARANDO" : "CANCELADO";
+        
+        await supabase
+            .from("pedidos")
+            .update({ estado: nuevoEstadoPedido, updated_at: new Date() })
+            .eq("id_pedido", id);
+
+        // Crear notificación automática para el cliente
+        const tituloNoti = estado === "APROBADO" ? "¡Pedido Aprobado!" : "Pedido Rechazado";
+        const mensajeNoti = estado === "APROBADO"
+            ? `Tu pedido #${id} fue aprobado con éxito y pronto llegará a tu destino.`
+            : `Lo sentimos, tu pedido #${id} fue rechazado.`;
+
+        await supabase.from("notificaciones").insert([{
+            id_usuario: pedido.id_usuario,
+            titulo: tituloNoti,
+            mensaje: mensajeNoti,
+            leida: false
+        }]);
+
+        return res.status(200).json({
+            mensaje: `Pedido ${estado.toLowerCase()} correctamente y cliente notificado`
+        });
+
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }

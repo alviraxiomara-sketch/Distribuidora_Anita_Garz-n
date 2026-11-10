@@ -77,6 +77,60 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     });
   }
 
+  // Extraer el ID del pedido del mensaje (ej: "Nuevo pedido #7 de...")
+  int? _extraerIdPedido(String mensaje) {
+    try {
+      final regExp = RegExp(r'#(\d+)');
+      final match = regExp.firstMatch(mensaje);
+      if (match != null) {
+        return int.parse(match.group(1)!);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // Función para aprobar o rechazar el pedido desde la notificación del admin
+  Future<void> _actualizarEstadoPedido(String mensaje, String estado) async {
+    final pedidoId = _extraerIdPedido(mensaje);
+    if (pedidoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo identificar el ID del pedido'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final res = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/pedidos/$pedidoId/estado-notificar'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'estado': estado}),
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pedido #$pedidoId ${estado.toLowerCase()} exitosamente y cliente notificado'),
+            backgroundColor: estado == 'APROBADO' ? Colors.green : Colors.red,
+          ),
+        );
+        _cargarNotificacionesBD();
+      } else {
+        final decoded = jsonDecode(res.body);
+        throw Exception(decoded['error'] ?? 'Error al actualizar');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   // Eliminar una notificación conectada al backend
   Future<void> _eliminarNotificacion(dynamic id, int index) async {
     setState(() {
@@ -102,7 +156,7 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFF031A2E),
-      
+
       // Menú lateral del Administrador integrado
       drawer: const AdminDrawer(),
 
@@ -123,10 +177,14 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
                 _scaffoldKey.currentState?.openDrawer();
               },
             ),
-            const SizedBox(width: 16), // Separación entre la hamburguesa y la casita
+            const SizedBox(width: 16),
             // 2. Botón de la Casita (Dirige a PrincipalAdminScreen)
             IconButton(
-              icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
+              icon: const Icon(
+                Icons.home_outlined,
+                color: Colors.white,
+                size: 24,
+              ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () {
@@ -143,20 +201,22 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
         actions: [
           // Ícono de perfil (persona) -> Dirige a profile.dart
           IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
+            icon: const Icon(
+              Icons.account_circle_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfileScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
             },
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           children: [
@@ -172,56 +232,61 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
             ),
             const SizedBox(height: 20),
 
-            // Contenedor principal de notificaciones
-            Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(minHeight: 480),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF384E5E).withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF00A8FF),
-                  width: 2,
+            // Contenedor principal de notificaciones ocupando el espacio restante
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF384E5E).withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF00A8FF), width: 2),
+                ),
+                child: Column(
+                  children: [
+                    const BadgePedidos(),
+                    const SizedBox(height: 20),
+
+                    if (_isLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF00A8FF),
+                        ),
+                      )
+                    else if (_notificaciones.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: Text(
+                          'No tienes notificaciones pendientes',
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _notificaciones.length,
+                          itemBuilder: (context, index) {
+                            final item = _notificaciones[index];
+                            final idNotif =
+                                item['id'] ?? item['id_notificacion'] ?? index;
+                            final mensaje = item['mensaje'] ?? '';
+
+                            return NotificacionItemCard(
+                              notificacion: item,
+                              onDelete: () => _eliminarNotificacion(idNotif, index),
+                              onCambiarEstado: (nuevoEstado) {
+                                _actualizarEstadoPedido(mensaje, nuevoEstado);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              child: Column(
-                children: [
-                  const BadgePedidos(),
-                  const SizedBox(height: 20),
-
-                  if (_isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(40.0),
-                      child: CircularProgressIndicator(color: Color(0xFF00A8FF)),
-                    )
-                  else if (_notificaciones.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(40.0),
-                      child: Text(
-                        'No tienes notificaciones pendientes',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _notificaciones.length,
-                      itemBuilder: (context, index) {
-                        final item = _notificaciones[index];
-                        final idNotif = item['id'] ?? item['id_notificacion'] ?? index;
-                        
-                        return NotificacionItemCard(
-                          notificacion: item,
-                          onDelete: () => _eliminarNotificacion(idNotif, index),
-                        );
-                      },
-                    ),
-                ],
-              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
           ],
         ),
       ),
