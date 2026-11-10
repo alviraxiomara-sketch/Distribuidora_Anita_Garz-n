@@ -1,76 +1,66 @@
 import { supabase } from "../config/supabase.js";
 import { enviarCorreoPedidoExitoso } from "../services/notificacion-service.js";
 
-// ==========================
-// MODELOS AUXILIARES
-// ==========================
-const crearPedido = async (pedido) => {
-    const { data, error } = await supabase
-        .from("pedidos")
-        .insert([pedido])
-        .select()
-        .single();
-    return { data, error };
+// Función auxiliar para subir el comprobante a Supabase Storage
+const subirComprobanteAStorage = async (base64Data) => {
+    if (!base64Data || !base64Data.startsWith('data:image')) return base64Data;
+
+    try {
+        const base64Image = base64Data.split(';base64,').pop();
+        const buffer = Buffer.from(base64Image, 'base64');
+        const fileName = `comprobante_${Date.now()}.jpg`;
+
+        const { error } = await supabase.storage
+            .from('comprobantes')
+            .upload(fileName, buffer, {
+                contentType: 'image/jpeg',
+                upsert: true
+            });
+
+        if (error) {
+            console.error("Error al subir a Supabase Storage:", error.message);
+            return null;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+            .from('comprobantes')
+            .getPublicUrl(fileName);
+
+        return publicUrlData.publicUrl;
+    } catch (err) {
+        console.error("Error procesando imagen:", err);
+        return null;
+    }
 };
 
-const crearDetallePedido = async (detalle) => {
-    const { data, error } = await supabase
-        .from("detalle_pedido")
-        .insert([detalle])
-        .select()
-        .single();
-    return { data, error };
-};
-
-const obtenerPedidosPorUsuario = async (id_usuario) => {
-    return await supabase
-        .from("pedidos")
-        .select("*, detalle_pedido(*, productos(*))")
-        .eq("id_usuario", id_usuario)
-        .order("created_at", { ascending: false });
-};
-
-const obtenerTodosLosPedidos = async () => {
-    return await supabase
-        .from("pedidos")
-        .select("*, usuarios(nombre, correo), detalle_pedido(*, productos(*))")
-        .order("created_at", { ascending: false });
-};
-
-const obtenerPedidoPorId = async (id_pedido) => {
-    return await supabase
-        .from("pedidos")
-        .select("*, usuarios(nombre, correo), detalle_pedido(*, productos(*))")
-        .eq("id_pedido", id_pedido)
-        .maybeSingle();
-};
-
-const actualizarEstadoPedido = async (id_pedido, estado) => {
-    return await supabase
-        .from("pedidos")
-        .update({ estado })
-        .eq("id_pedido", id_pedido)
-        .select()
-        .single();
-};
-
-// ==========================
-// CREAR PEDIDO
-// ==========================
 export const crear = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
         const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
 
-        if (!direccion_entrega) {
-            return res.status(400).json({ error: "La dirección de entrega es obligatoria" });
+        console.log("📥 Datos recibidos en el backend:", {
+            id_usuario,
+            direccion_entrega,
+            telefono_contacto,
+            metodo_pago,
+            tiene_comprobante: !!comprobante_url
+        });
+
+        if (!direccion_entrega || !telefono_contacto) {
+            return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
         }
 
-        if (!telefono_contacto) {
-            return res.status(400).json({ error: "El teléfono de contacto es obligatorio" });
+        // 1. Procesar comprobante si viene en base64
+        let urlComprobanteFinal = null;
+        if (comprobante_url) {
+            if (comprobante_url.startsWith('data:image')) {
+                urlComprobanteFinal = await subirComprobanteAStorage(comprobante_url);
+            } else {
+                urlComprobanteFinal = comprobante_url;
+            }
         }
 
-        // OBTENER CARRITO
+        // 2. Obtener y validar el carrito del usuario
         const { data: carrito, error: errorCarrito } = await supabase
             .from("carrito")
             .select(`
@@ -86,12 +76,8 @@ export const crear = async (req, res) => {
             .eq("id_usuario", id_usuario)
             .maybeSingle();
 
-        if (errorCarrito) {
-            return res.status(500).json({ error: errorCarrito.message });
-        }
-
-        if (!carrito || !carrito.detalle_carrito || carrito.detalle_carrito.length === 0) {
-            return res.status(400).json({ error: "El carrito está vacío" });
+        if (errorCarrito || !carrito || !carrito.detalle_carrito || carrito.detalle_carrito.length === 0) {
+            return res.status(400).json({ error: "El carrito está vacío o no se pudo cargar" });
         }
 
         let total = 0;
@@ -99,51 +85,29 @@ export const crear = async (req, res) => {
         const resumenProductos = [];
 
         for (const detalle of carrito.detalle_carrito) {
-            // Incluimos campos adicionales como 'tapa' o 'presentacion' según tu BD
             const { data: producto, error: errorProducto } = await supabase
                 .from("productos")
-                .select(`
-                    id_producto,
-                    nombre,
-                    presentacion,
-                    tapa,
-                    precio_detal,
-                    precio_mayorista,
-                    cantidad_minima_mayorista,
-                    activo
-                `)
+                .select(`id_producto, nombre, presentacion, tapa, precio_detal, precio_mayorista, cantidad_minima_mayorista, activo`)
                 .eq("id_producto", detalle.id_producto)
                 .maybeSingle();
 
-            if (errorProducto || !producto) {
-                return res.status(404).json({ error: `El producto ${detalle.id_producto} no existe` });
+            if (errorProducto || !producto || !producto.activo) {
+                return res.status(404).json({ error: `Producto no disponible` });
             }
 
-            if (!producto.activo) {
-                return res.status(400).json({ error: `El producto "${producto.nombre}" ya no está disponible` });
-            }
-
-            const { data: inventario, error: errorInventario } = await supabase
+            // Validar inventario
+            const { data: inventario } = await supabase
                 .from("inventario")
                 .select(`id_inventario, stock_actual`)
                 .eq("id_producto", detalle.id_producto)
                 .maybeSingle();
 
-            if (errorInventario || !inventario) {
-                return res.status(400).json({ error: `El producto "${producto.nombre}" no tiene inventario disponible` });
-            }
-
-            if (Number(detalle.cantidad) > Number(inventario.stock_actual)) {
-                return res.status(400).json({ error: `Stock insuficiente para "${producto.nombre}". Disponible: ${inventario.stock_actual}` });
+            if (!inventario || Number(detalle.cantidad) > Number(inventario.stock_actual)) {
+                return res.status(400).json({ error: `Stock insuficiente para ${producto.nombre}` });
             }
 
             let precioUnitario = Number(producto.precio_detal);
-
-            if (
-                producto.precio_mayorista &&
-                producto.cantidad_minima_mayorista &&
-                Number(detalle.cantidad) >= Number(producto.cantidad_minima_mayorista)
-            ) {
+            if (producto.precio_mayorista && producto.cantidad_minima_mayorista && Number(detalle.cantidad) >= Number(producto.cantidad_minima_mayorista)) {
                 precioUnitario = Number(producto.precio_mayorista);
             }
 
@@ -157,47 +121,61 @@ export const crear = async (req, res) => {
                 subtotal
             });
 
-            // Armar texto descriptivo incluyendo Tapa o Presentación si existen
             const detalleExtra = producto.tapa ? ` (Tapa: ${producto.tapa})` : (producto.presentacion ? ` (${producto.presentacion})` : '');
             resumenProductos.push(`${producto.nombre}${detalleExtra} x${detalle.cantidad}`);
         }
 
-        const pedido = {
-            id_usuario,
-            direccion_entrega,
-            telefono_contacto,
-            estado: "PENDIENTE",
-            total
-        };
-
-        const { data: nuevoPedido, error: errorPedido } = await crearPedido(pedido);
+        // 3. Crear el pedido principal
+        const { data: nuevoPedido, error: errorPedido } = await supabase
+            .from("pedidos")
+            .insert([{
+                id_usuario,
+                direccion_entrega,
+                telefono_contacto,
+                estado: "PENDIENTE",
+                total
+            }])
+            .select()
+            .single();
 
         if (errorPedido) {
+            console.error("❌ Error creando el pedido:", errorPedido.message);
             return res.status(500).json({ error: errorPedido.message });
         }
 
-        // REGISTRAR EN LA TABLA 'pagos'
-        await supabase
+        console.log("✅ Pedido creado con ID:", nuevoPedido.id_pedido);
+
+        // 4. REGISTRAR EL PAGO EN LA TABLA 'pagos'
+        const { data: pagoInsertado, error: errorPago } = await supabase
             .from("pagos")
             .insert([{
                 id_pedido: nuevoPedido.id_pedido,
                 metodo_pago: metodo_pago || "Nequi",
                 valor: total,
                 estado: "PENDIENTE",
-                comprobante: comprobante_url || null,
-                fecha_pago: new Date()
-            }]);
+                comprobante: urlComprobanteFinal,
+                fecha_pago: new Date().toISOString()
+            }])
+            .select();
 
+        if (errorPago) {
+            console.error("❌ ERROR CRÍTICO AL INSERTAR EN PAGOS:", errorPago.message);
+        } else {
+            console.log("✅ Pago insertado correctamente en la base de datos:", pagoInsertado);
+        }
+
+        // 5. Insertar detalles del pedido
         for (const detalle of detallesValidados) {
-            await crearDetallePedido({
+            await supabase.from("detalle_pedido").insert([{
                 id_pedido: nuevoPedido.id_pedido,
                 id_producto: detalle.id_producto,
                 cantidad: detalle.cantidad,
                 precio_unitario: detalle.precio_unitario,
                 subtotal: detalle.subtotal
-            });
+            }]);
         }
 
+        // 6. Descontar stock del inventario
         for (const detalle of detallesValidados) {
             const { data: inventario } = await supabase
                 .from("inventario")
@@ -205,75 +183,61 @@ export const crear = async (req, res) => {
                 .eq("id_producto", detalle.id_producto)
                 .single();
 
-            const nuevoStock = Number(inventario.stock_actual) - Number(detalle.cantidad);
-
-            await supabase
-                .from("inventario")
-                .update({ stock_actual: nuevoStock, updated_at: new Date() })
-                .eq("id_inventario", inventario.id_inventario);
-
-            await supabase
-                .from("movimientos_inventario")
-                .insert({
-                    id_producto: detalle.id_producto,
-                    tipo_movimiento: "SALIDA",
-                    cantidad: detalle.cantidad,
-                    observacion: `Salida por pedido #${nuevoPedido.id_pedido}`,
-                    id_usuario
-                });
+            if (inventario) {
+                const nuevoStock = Number(inventario.stock_actual) - Number(detalle.cantidad);
+                await supabase
+                    .from("inventario")
+                    .update({ stock_actual: nuevoStock, updated_at: new Date() })
+                    .eq("id_inventario", inventario.id_inventario);
+            }
         }
 
+        // 7. Vaciar el carrito
         await supabase
             .from("detalle_carrito")
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // NOTIFICACIONES
-        await supabase.from("notificaciones").insert([{
-            id_usuario: id_usuario,
-            titulo: "¡Pedido Realizado!",
-            mensaje: `Tu pedido #${nuevoPedido.id_pedido} ha sido registrado con éxito por $${total}.`,
-            leida: false
-        }]);
-
+        // 8. Notificaciones para administradores
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
             .or("rol.eq.ADMIN,rol.eq.admin");
 
-        const mensajeDetalladoAdmin = `Cliente: ${req.usuario.nombre}\nCompra: ${resumenProductos.join(', ')}\nTotal: $${total}`;
+        const mensajeAdmin = `Cliente: ${req.usuario.nombre}\nMétodo: ${metodo_pago || 'Nequi'}\nCompra: ${resumenProductos.join(', ')}\nTotal: $${total}`;
 
         if (adminUsers && adminUsers.length > 0) {
             for (const admin of adminUsers) {
                 await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
                     titulo: "Nuevo Pedido Recibido",
-                    mensaje: mensajeDetalladoAdmin,
-                    comprobante: comprobante_url || null, // Asegura que se guarde el comprobante aquí
+                    mensaje: mensajeAdmin,
+                    comprobante: urlComprobanteFinal,
                     leida: false
                 }]);
             }
         }
 
+        // 9. Enviar correo de éxito
         try {
             await enviarCorreoPedidoExitoso(
                 req.usuario.correo,
                 req.usuario.nombre,
                 nuevoPedido.id_pedido,
                 total,
-                metodo_pago || 'Normal'
+                metodo_pago || 'Nequi'
             );
         } catch (mailError) {
             console.error("Error al enviar correo:", mailError);
         }
 
         return res.status(201).json({
-            mensaje: "Pedido creado correctamente",
-            pedido: nuevoPedido,
-            detalles: detallesValidados
+            mensaje: "Pedido y pago procesados con éxito",
+            pedido: nuevoPedido
         });
 
     } catch (error) {
+        console.error("❌ Excepción general en el controlador de pedidos:", error.message);
         return res.status(500).json({ error: error.message });
     }
 };
@@ -281,7 +245,12 @@ export const crear = async (req, res) => {
 export const listarMisPedidos = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
-        const { data, error } = await obtenerPedidosPorUsuario(id_usuario);
+        const { data, error } = await supabase
+            .from("pedidos")
+            .select("*, detalle_pedido(*, productos(*))")
+            .eq("id_usuario", id_usuario)
+            .order("created_at", { ascending: false });
+
         if (error) return res.status(500).json({ error: error.message });
         return res.status(200).json(data);
     } catch (error) {
@@ -291,7 +260,11 @@ export const listarMisPedidos = async (req, res) => {
 
 export const listarTodos = async (req, res) => {
     try {
-        const { data, error } = await obtenerTodosLosPedidos();
+        const { data, error } = await supabase
+            .from("pedidos")
+            .select("*, usuarios(nombre, correo), detalle_pedido(*, productos(*))")
+            .order("created_at", { ascending: false });
+
         if (error) return res.status(500).json({ error: error.message });
         return res.status(200).json(data);
     } catch (error) {
@@ -302,7 +275,12 @@ export const listarTodos = async (req, res) => {
 export const obtenerPedido = async (req, res) => {
     try {
         const { id } = req.params;
-        const { data, error } = await obtenerPedidoPorId(id);
+        const { data, error } = await supabase
+            .from("pedidos")
+            .select("*, usuarios(nombre, correo), detalle_pedido(*, productos(*))")
+            .eq("id_pedido", id)
+            .maybeSingle();
+
         if (error) return res.status(500).json({ error: error.message });
         if (!data) return res.status(404).json({ error: "Pedido no encontrado" });
         return res.status(200).json(data);
@@ -315,7 +293,13 @@ export const cambiarEstado = async (req, res) => {
     try {
         const { id } = req.params;
         const { estado } = req.body;
-        const { data, error } = await actualizarEstadoPedido(id, estado);
+        const { data, error } = await supabase
+            .from("pedidos")
+            .update({ estado })
+            .eq("id_pedido", id)
+            .select()
+            .single();
+
         if (error) return res.status(500).json({ error: error.message });
         return res.status(200).json({ mensaje: "Estado actualizado", pedido: data });
     } catch (error) {
@@ -327,7 +311,13 @@ export const cambiarEstadoYNotificar = async (req, res) => {
     try {
         const { id } = req.params;
         const { estado } = req.body;
-        const { data: pedido, error: errorPedido } = await obtenerPedidoPorId(id);
+        
+        const { data: pedido, error: errorPedido } = await supabase
+            .from("pedidos")
+            .select("*, usuarios(nombre, correo)")
+            .eq("id_pedido", id)
+            .maybeSingle();
+
         if (errorPedido || !pedido) return res.status(404).json({ error: "Pedido no encontrado" });
 
         const nuevoEstadoPedido = estado === "APROBADO" ? "PREPARANDO" : "CANCELADO";

@@ -117,18 +117,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw Exception('No has iniciado sesión');
       }
 
-      String? comprobanteUrl;
+      String? comprobanteBase64;
 
       // =========================================================================
-      // GENERAR O ASIGNAR LA URL DEL COMPROBANTE SI EL MÉTODO ES NEQUI
+      // CONVERTIR LA IMAGEN REAL A BASE64 PARA ENVIARLA AL BACKEND
       // =========================================================================
       if (_metodoPago == 'Nequi') {
-        comprobanteUrl = "https://tu-bucket-supabase.supabase.co/storage/v1/object/public/comprobantes/comprobante_${DateTime.now().millisecondsSinceEpoch}.jpg";
+        if (kIsWeb && _comprobanteBytes != null) {
+          comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(_comprobanteBytes!)}';
+        } else if (_comprobanteImagen != null) {
+          final bytes = await _comprobanteImagen!.readAsBytes();
+          comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        }
       }
 
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
       
-      // Enviamos todos los datos incluyendo la URL del comprobante al backend
+      // Enviamos el nombre, método de pago y la imagen real codificada
       final response = await http.post(
         url,
         headers: {
@@ -136,10 +141,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
+          'nombre_cliente': _nombreController.text,
           'direccion_entrega': _direccionController.text,
           'telefono_contacto': _telefonoController.text,
           'metodo_pago': _metodoPago,
-          'comprobante_url': comprobanteUrl, // <--- Enviado hacia el backend
+          'comprobante_url': comprobanteBase64, // <--- Envía el comprobante real
         }),
       );
 
