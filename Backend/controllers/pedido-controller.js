@@ -164,7 +164,7 @@ export const crear = async (req, res) => {
             return res.status(500).json({ error: errorPedido.message });
         }
 
-        // 4. Registrar pago guardando la URL del comprobante
+        // 4. Registrar pago guardando la URL del comprobante en la columna 'comprobantes'
         const metodoPagoLimpio = (metodo_pago || "nequi").toLowerCase();
 
         console.log(`💾 [Base de Datos] Insertando en pagos -> ID Pedido: ${nuevoPedido.id_pedido}, Comprobante a guardar:`, urlComprobanteFinal);
@@ -176,7 +176,7 @@ export const crear = async (req, res) => {
                 metodo_pago: metodoPagoLimpio,
                 valor: total,
                 estado: "PENDIENTE",
-                comprobante: urlComprobanteFinal,
+                comprobantes: urlComprobanteFinal, // <--- Ajustado a 'comprobantes' (plural)
                 fecha_pago: new Date().toISOString()
             }]);
 
