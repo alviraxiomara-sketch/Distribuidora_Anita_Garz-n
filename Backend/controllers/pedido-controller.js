@@ -38,14 +38,6 @@ export const crear = async (req, res) => {
         const id_usuario = req.usuario.id_usuario;
         const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
 
-        console.log("📥 Datos recibidos en el backend:", {
-            id_usuario,
-            direccion_entrega,
-            telefono_contacto,
-            metodo_pago,
-            tiene_comprobante: !!comprobante_url
-        });
-
         if (!direccion_entrega || !telefono_contacto) {
             return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
         }
@@ -95,7 +87,6 @@ export const crear = async (req, res) => {
                 return res.status(404).json({ error: `Producto no disponible` });
             }
 
-            // Validar inventario
             const { data: inventario } = await supabase
                 .from("inventario")
                 .select(`id_inventario, stock_actual`)
@@ -139,13 +130,10 @@ export const crear = async (req, res) => {
             .single();
 
         if (errorPedido) {
-            console.error("❌ Error creando el pedido:", errorPedido.message);
             return res.status(500).json({ error: errorPedido.message });
         }
 
-        console.log("✅ Pedido creado con ID:", nuevoPedido.id_pedido);
-
-        // 4. REGISTRAR EL PAGO EN LA TABLA 'pagos'
+        // 4. Registrar pago (con captura de error explícita)
         const { data: pagoInsertado, error: errorPago } = await supabase
             .from("pagos")
             .insert([{
@@ -159,10 +147,13 @@ export const crear = async (req, res) => {
             .select();
 
         if (errorPago) {
-            console.error("❌ ERROR CRÍTICO AL INSERTAR EN PAGOS:", errorPago.message);
+            console.error("❌ ERROR AL INSERTAR EN PAGOS:", errorPago.message);
+            console.error("Detalle completo:", JSON.stringify(errorPago));
+            return res.status(500).json({ error: `Error en pagos: ${errorPago.message}` });
         } else {
-            console.log("✅ Pago insertado correctamente en la base de datos:", pagoInsertado);
+            console.log("✅ Pago insertado correctamente:", pagoInsertado);
         }
+       
 
         // 5. Insertar detalles del pedido
         for (const detalle of detallesValidados) {
@@ -175,7 +166,7 @@ export const crear = async (req, res) => {
             }]);
         }
 
-        // 6. Descontar stock del inventario
+        // 6. Descontar inventario
         for (const detalle of detallesValidados) {
             const { data: inventario } = await supabase
                 .from("inventario")
@@ -192,33 +183,33 @@ export const crear = async (req, res) => {
             }
         }
 
-        // 7. Vaciar el carrito
+        // 7. Vaciar carrito
         await supabase
             .from("detalle_carrito")
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // 8. Notificaciones para administradores
+        // 8. Notificaciones para administradores (INCLUYENDO ID DEL PEDIDO Y TEXTO CON #ID)
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
             .or("rol.eq.ADMIN,rol.eq.admin");
 
-        const mensajeAdmin = `Cliente: ${req.usuario.nombre}\nMétodo: ${metodo_pago || 'Nequi'}\nCompra: ${resumenProductos.join(', ')}\nTotal: $${total}`;
+        const mensajeAdmin = `Nuevo Pedido #${nuevoPedido.id_pedido}\nCliente: ${req.usuario.nombre}\nMétodo: ${metodo_pago || 'Nequi'}\nCompra: ${resumenProductos.join(', ')}\nTotal: $${total}`;
 
         if (adminUsers && adminUsers.length > 0) {
             for (const admin of adminUsers) {
                 await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
+                    id_pedido: nuevoPedido.id_pedido, // <--- Vinculación directa del ID
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeAdmin,
-                    comprobante: urlComprobanteFinal,
+                    comprobante: urlComprobanteFinal, // <--- URL de la imagen guardada
                     leida: false
                 }]);
             }
         }
 
-        // 9. Enviar correo de éxito
         try {
             await enviarCorreoPedidoExitoso(
                 req.usuario.correo,
@@ -227,9 +218,7 @@ export const crear = async (req, res) => {
                 total,
                 metodo_pago || 'Nequi'
             );
-        } catch (mailError) {
-            console.error("Error al enviar correo:", mailError);
-        }
+        } catch (_) {}
 
         return res.status(201).json({
             mensaje: "Pedido y pago procesados con éxito",
@@ -237,7 +226,6 @@ export const crear = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Excepción general en el controlador de pedidos:", error.message);
         return res.status(500).json({ error: error.message });
     }
 };
@@ -330,6 +318,7 @@ export const cambiarEstadoYNotificar = async (req, res) => {
 
         await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
+            id_pedido: id,
             titulo: tituloNoti,
             mensaje: mensajeNoti,
             leida: false

@@ -27,7 +27,6 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     _cargarNotificacionesBD();
   }
 
-  // Carga notificaciones desde la base de datos y marca automáticamente las no leídas
   Future<void> _cargarNotificacionesBD() async {
     setState(() => _isLoading = true);
     try {
@@ -52,7 +51,6 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
           lista = decoded['data'];
         }
 
-        // Marcar automáticamente como leídas en el servidor las pendientes
         for (var item in lista) {
           final bool leido = item['leido'] ?? item['leida'] ?? false;
           if (!leido) {
@@ -87,21 +85,22 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     } catch (_) {}
   }
 
-  // Datos mock para visualización si la API aún no responde
   void _usarDatosPrueba() {
     if (!mounted) return;
     setState(() {
       _notificaciones = [
         {'id': 1, 'mensaje': 'Tu pedido ya sera entregado'},
         {'id': 2, 'mensaje': 'Tu pedido ya fue exitoso!!'},
-        {'id': 3, 'mensaje': 'Tu pedido ya fue exitoso!!'},
       ];
       _isLoading = false;
     });
   }
 
-  // Extraer el ID del pedido del mensaje (ej: "Nuevo pedido #7 de...")
-  int? _extraerIdPedido(String mensaje) {
+  // Extracción segura del ID del pedido (evita el error rojo)
+  int? _extraerIdPedido(Map<String, dynamic> notificacion, String mensaje) {
+    if (notificacion['id_pedido'] != null) {
+      return int.tryParse(notificacion['id_pedido'].toString());
+    }
     try {
       final regExp = RegExp(r'#(\d+)');
       final match = regExp.firstMatch(mensaje);
@@ -112,9 +111,8 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     return null;
   }
 
-  // Función para aprobar o rechazar el pedido desde la notificación del admin
-  Future<void> _actualizarEstadoPedido(String mensaje, String estado) async {
-    final pedidoId = _extraerIdPedido(mensaje);
+  Future<void> _actualizarEstadoPedido(Map<String, dynamic> notificacion, String mensaje, String estado) async {
+    final pedidoId = _extraerIdPedido(notificacion, mensaje);
     if (pedidoId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo identificar el ID del pedido'), backgroundColor: Colors.red),
@@ -154,7 +152,6 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     }
   }
 
-  // Eliminar una notificación conectada al backend
   Future<void> _eliminarNotificacion(dynamic id, int index) async {
     setState(() {
       _notificaciones.removeAt(index);
@@ -191,25 +188,17 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
               icon: const Icon(Icons.menu, color: Colors.white, size: 24),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              onPressed: () {
-                _scaffoldKey.currentState?.openDrawer();
-              },
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
             ),
             const SizedBox(width: 16),
             IconButton(
-              icon: const Icon(
-                Icons.home_outlined,
-                color: Colors.white,
-                size: 24,
-              ),
+              icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const PrincipalAdminScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const PrincipalAdminScreen()),
                 );
               },
             ),
@@ -217,11 +206,7 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.account_circle_outlined,
-              color: Colors.white,
-              size: 26,
-            ),
+            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
             onPressed: () {
               Navigator.push(
                 context,
@@ -263,9 +248,7 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
                     if (_isLoading)
                       const Padding(
                         padding: EdgeInsets.all(40.0),
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF00A8FF),
-                        ),
+                        child: CircularProgressIndicator(color: Color(0xFF00A8FF)),
                       )
                     else if (_notificaciones.isEmpty)
                       const Padding(
@@ -281,15 +264,14 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
                           itemCount: _notificaciones.length,
                           itemBuilder: (context, index) {
                             final item = _notificaciones[index];
-                            final idNotif =
-                                item['id'] ?? item['id_notificacion'] ?? index;
+                            final idNotif = item['id'] ?? item['id_notificacion'] ?? index;
                             final mensaje = item['mensaje'] ?? '';
 
                             return NotificacionItemCard(
                               notificacion: item,
                               onDelete: () => _eliminarNotificacion(idNotif, index),
                               onCambiarEstado: (nuevoEstado) {
-                                _actualizarEstadoPedido(mensaje, nuevoEstado);
+                                _actualizarEstadoPedido(item, mensaje, nuevoEstado);
                               },
                             );
                           },
