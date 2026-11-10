@@ -27,7 +27,7 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     _cargarNotificacionesBD();
   }
 
-  // Carga notificaciones desde la base de datos vía API REST
+  // Carga notificaciones desde la base de datos y marca automáticamente las no leídas
   Future<void> _cargarNotificacionesBD() async {
     setState(() => _isLoading = true);
     try {
@@ -52,6 +52,17 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
           lista = decoded['data'];
         }
 
+        // Marcar automáticamente como leídas en el servidor las pendientes
+        for (var item in lista) {
+          final bool leido = item['leido'] ?? item['leida'] ?? false;
+          if (!leido) {
+            final idNotif = item['id_notificacion'] ?? item['id'];
+            if (idNotif != null) {
+              _marcarNotificacionComoLeidaServidor(idNotif, token);
+            }
+          }
+        }
+
         setState(() {
           _notificaciones = lista;
           _isLoading = false;
@@ -62,6 +73,18 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     } catch (_) {
       _usarDatosPrueba();
     }
+  }
+
+  Future<void> _marcarNotificacionComoLeidaServidor(dynamic id, String? token) async {
+    try {
+      await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones/$id/leida'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+    } catch (_) {}
   }
 
   // Datos mock para visualización si la API aún no responde
@@ -156,19 +179,14 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFF031A2E),
-
-      // Menú lateral del Administrador integrado
       drawer: const AdminDrawer(),
-
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         elevation: 0,
-        // Ancho ampliado a 130 para alojar ambos botones holgadamente y evitar el overflow
         leadingWidth: 130,
         leading: Row(
           children: [
             const SizedBox(width: 8),
-            // 1. Botón de Menú de Hamburguesa (Abre el Drawer)
             IconButton(
               icon: const Icon(Icons.menu, color: Colors.white, size: 24),
               padding: EdgeInsets.zero,
@@ -178,7 +196,6 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
               },
             ),
             const SizedBox(width: 16),
-            // 2. Botón de la Casita (Dirige a PrincipalAdminScreen)
             IconButton(
               icon: const Icon(
                 Icons.home_outlined,
@@ -199,7 +216,6 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
           ],
         ),
         actions: [
-          // Ícono de perfil (persona) -> Dirige a profile.dart
           IconButton(
             icon: const Icon(
               Icons.account_circle_outlined,
@@ -231,8 +247,6 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Contenedor principal de notificaciones ocupando el espacio restante
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -246,7 +260,6 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
                   children: [
                     const BadgePedidos(),
                     const SizedBox(height: 20),
-
                     if (_isLoading)
                       const Padding(
                         padding: EdgeInsets.all(40.0),

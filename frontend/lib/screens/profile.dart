@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' as img_picker;
@@ -40,7 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _cargarDatosServidor();
   }
 
-  // Carga los datos frescos directamente del backend (y de respaldo usa local)
   Future<void> _cargarDatosServidor() async {
     setState(() => _cargando = true);
     try {
@@ -65,10 +66,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _correo.text = usuario['correo'] ?? '';
           _telefono.text = usuario['telefono'] ?? '';
           _direccion.text = usuario['direccion'] ?? '';
-          _fotoGuardada = usuario['avatar'] ?? usuario['foto_perfil'];
+          _fotoGuardada = usuario['foto_perfil'] ?? usuario['avatar'];
         });
       } else {
-        // Respaldo con SharedPreferences si la red falla
         final datosLocales = await AuthService.getUsuario();
         setState(() {
           _nombre.text = datosLocales['nombre'] ?? '';
@@ -79,7 +79,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      // Respaldo local si ocurre cualquier excepción
       final datosLocales = await AuthService.getUsuario();
       setState(() {
         _nombre.text = datosLocales['nombre'] ?? '';
@@ -175,6 +174,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
     fn.requestFocus();
   }
 
+  // Método seguro compatible tanto con Flutter Web como con Móvil
+  Widget _buildAvatarContent() {
+    if (_fotoNueva != null) {
+      if (kIsWeb) {
+        return Image.network(
+          _fotoNueva!.path,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _defaultAvatarIcon(),
+        );
+      } else {
+        return Image.file(
+          File(_fotoNueva!.path),
+          fit: BoxFit.cover,
+        );
+      }
+    }
+
+    if (_fotoGuardada != null && _fotoGuardada!.isNotEmpty) {
+      if (_fotoGuardada!.startsWith('http://') || _fotoGuardada!.startsWith('https://')) {
+        return Image.network(
+          _fotoGuardada!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _defaultAvatarIcon(),
+        );
+      }
+
+      try {
+        String base64Clean = _fotoGuardada!;
+        if (base64Clean.contains(',')) {
+          base64Clean = base64Clean.split(',').last;
+        }
+        return Image.memory(
+          base64Decode(base64Clean),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _defaultAvatarIcon(),
+        );
+      } catch (_) {
+        return _defaultAvatarIcon();
+      }
+    }
+
+    return _defaultAvatarIcon();
+  }
+
+  Widget _defaultAvatarIcon() {
+    return Container(
+      color: const Color(0xFF084B75),
+      child: const Icon(Icons.person, size: 70, color: Colors.white70),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -193,23 +243,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 10),
-                  ProfileAvatar(
-                    fotoNueva: _fotoNueva,
-                    fotoGuardada: _fotoGuardada,
-                    onTap: () async {
-                      final img = await _picker.pickImage(
-                        source: img_picker.ImageSource.gallery,
-                        maxWidth: 400,
-                        maxHeight: 400,
-                        imageQuality: 35,
-                      );
-                      if (img != null) {
-                        setState(() {
-                          _fotoNueva = img;
-                          _editando = true;
-                        });
-                      }
-                    },
+                  Center(
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF00A8FF), width: 3),
+                          ),
+                          child: ClipOval(child: _buildAvatarContent()),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final img = await _picker.pickImage(
+                                source: img_picker.ImageSource.gallery,
+                                maxWidth: 400,
+                                maxHeight: 400,
+                                imageQuality: 35,
+                              );
+                              if (img != null) {
+                                setState(() {
+                                  _fotoNueva = img;
+                                  _editando = true;
+                                });
+                              }
+                            },
+                            child: Container(
+                              height: 38,
+                              width: 38,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF00A8FF),
+                              ),
+                              child: const Icon(Icons.add, color: Colors.white, size: 24),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(

@@ -268,7 +268,7 @@ export const crear = async (req, res) => {
             leida: false
         }]);
 
-        // 2. Notificación para el administrador en su panel (con imagen de comprobante opcional)
+        // 2. Notificación para el administrador en su panel (guardando en la columna 'comprobante')
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
@@ -280,7 +280,7 @@ export const crear = async (req, res) => {
                     id_usuario: admin.id_usuario,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: `Nuevo pedido #${nuevoPedido.id_pedido} de ${req.usuario.nombre} por valor de $${total}`,
-                    imagen_url: comprobante_url || null,
+                    comprobante: comprobante_url || null, // <--- Guardado en la columna comprobante de Supabase
                     leida: false
                 }]);
             }

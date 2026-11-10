@@ -72,6 +72,17 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           lista = decoded['data'] ?? decoded['notificaciones'] ?? [];
         }
 
+        // Marcar automáticamente como leídas en el servidor
+        for (var item in lista) {
+          final bool leido = item['leido'] ?? item['leida'] ?? false;
+          if (!leido) {
+            final idNotif = item['id_notificacion'] ?? item['id'];
+            if (idNotif != null) {
+              _marcarNotificacionComoLeidaServidor(idNotif, token);
+            }
+          }
+        }
+
         setState(() {
           _notificacionesList = lista;
           _isLoading = false;
@@ -82,6 +93,18 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _marcarNotificacionComoLeidaServidor(dynamic id, String? token) async {
+    try {
+      await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones/$id/leida'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+    } catch (_) {}
   }
 
   Future<void> _eliminarNotificacion(dynamic id) async {
