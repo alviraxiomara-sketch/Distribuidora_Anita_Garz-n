@@ -62,7 +62,6 @@ export const crear = async (req, res) => {
         const id_usuario = req.usuario.id_usuario;
         const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
 
-        // VALIDAR DATOS
         if (!direccion_entrega) {
             return res.status(400).json({ error: "La dirección de entrega es obligatoria" });
         }
@@ -95,17 +94,19 @@ export const crear = async (req, res) => {
             return res.status(400).json({ error: "El carrito está vacío" });
         }
 
-        // VERIFICAR PRODUCTOS Y STOCK
         let total = 0;
         const detallesValidados = [];
         const resumenProductos = [];
 
         for (const detalle of carrito.detalle_carrito) {
+            // Incluimos campos adicionales como 'tapa' o 'presentacion' según tu BD
             const { data: producto, error: errorProducto } = await supabase
                 .from("productos")
                 .select(`
                     id_producto,
                     nombre,
+                    presentacion,
+                    tapa,
                     precio_detal,
                     precio_mayorista,
                     cantidad_minima_mayorista,
@@ -122,7 +123,6 @@ export const crear = async (req, res) => {
                 return res.status(400).json({ error: `El producto "${producto.nombre}" ya no está disponible` });
             }
 
-            // OBTENER INVENTARIO
             const { data: inventario, error: errorInventario } = await supabase
                 .from("inventario")
                 .select(`id_inventario, stock_actual`)
@@ -157,10 +157,11 @@ export const crear = async (req, res) => {
                 subtotal
             });
 
-            resumenProductos.push(`${producto.nombre} (x${detalle.cantidad})`);
+            // Armar texto descriptivo incluyendo Tapa o Presentación si existen
+            const detalleExtra = producto.tapa ? ` (Tapa: ${producto.tapa})` : (producto.presentacion ? ` (${producto.presentacion})` : '');
+            resumenProductos.push(`${producto.nombre}${detalleExtra} x${detalle.cantidad}`);
         }
 
-        // CREAR PEDIDO
         const pedido = {
             id_usuario,
             direccion_entrega,
@@ -176,7 +177,7 @@ export const crear = async (req, res) => {
         }
 
         // REGISTRAR EN LA TABLA 'pagos'
-        const { error: errorPago } = await supabase
+        await supabase
             .from("pagos")
             .insert([{
                 id_pedido: nuevoPedido.id_pedido,
@@ -187,11 +188,6 @@ export const crear = async (req, res) => {
                 fecha_pago: new Date()
             }]);
 
-        if (errorPago) {
-            console.error("Error al registrar pago:", errorPago.message);
-        }
-
-        // CREAR DETALLES DEL PEDIDO
         for (const detalle of detallesValidados) {
             await crearDetallePedido({
                 id_pedido: nuevoPedido.id_pedido,
@@ -202,7 +198,6 @@ export const crear = async (req, res) => {
             });
         }
 
-        // DESCONTAR INVENTARIO
         for (const detalle of detallesValidados) {
             const { data: inventario } = await supabase
                 .from("inventario")
@@ -228,17 +223,12 @@ export const crear = async (req, res) => {
                 });
         }
 
-        // VACIAR CARRITO
         await supabase
             .from("detalle_carrito")
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // ==========================
         // NOTIFICACIONES
-        // ==========================
-
-        // 1. Notificación para el cliente
         await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
             titulo: "¡Pedido Realizado!",
@@ -246,7 +236,6 @@ export const crear = async (req, res) => {
             leida: false
         }]);
 
-        // 2. Notificación para los administradores con DETALLE DE PRODUCTOS Y COMPROBANTE
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
@@ -260,13 +249,12 @@ export const crear = async (req, res) => {
                     id_usuario: admin.id_usuario,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeDetalladoAdmin,
-                    comprobante: comprobante_url || null,
+                    comprobante: comprobante_url || null, // Asegura que se guarde el comprobante aquí
                     leida: false
                 }]);
             }
         }
 
-        // 3. Enviar correo
         try {
             await enviarCorreoPedidoExitoso(
                 req.usuario.correo,
@@ -290,9 +278,6 @@ export const crear = async (req, res) => {
     }
 };
 
-// ==========================
-// MÉTODOS ADICIONALES
-// ==========================
 export const listarMisPedidos = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
@@ -353,7 +338,6 @@ export const cambiarEstadoYNotificar = async (req, res) => {
             ? `Tu pedido #${id} fue aprobado con éxito.`
             : `Lo sentimos, tu pedido #${id} fue rechazado.`;
 
-        // Notificación al usuario con la decisión del administrador
         await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
             titulo: tituloNoti,

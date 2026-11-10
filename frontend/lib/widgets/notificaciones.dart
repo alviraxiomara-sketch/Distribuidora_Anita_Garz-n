@@ -53,7 +53,6 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
   bool _accionRealizada = false;
   String? _estadoSeleccionado;
 
-  // Pantalla emergente para ver la foto en grande con zoom táctil
   void _mostrarImagenAmpliada(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -69,7 +68,7 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
                   imageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Text(
-                    'No se pudo cargar el comprobante',
+                    'No se pudo cargar la imagen del comprobante',
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
@@ -94,9 +93,10 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
     final String titulo = widget.notificacion['titulo'] ?? 'Nuevo Pedido';
     final String mensaje = widget.notificacion['mensaje'] ?? 'Sin detalles';
     
-    // Lectura directa de la columna 'comprobante'
+    // Lectura robusta del comprobante desde diferentes campos posibles de la BD
     final String? comprobanteUrl = widget.notificacion['comprobante'] ?? 
-                                   widget.notificacion['imagen_url'];
+                                   widget.notificacion['imagen_url'] ??
+                                   widget.notificacion['comprobante_url'];
     
     final bool esAdminPedido = widget.onCambiarEstado != null;
 
@@ -122,7 +122,7 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Miniatura con enlace para ver la foto en zoom
+                // Miniatura del comprobante real
                 if (comprobanteUrl != null && comprobanteUrl.toString().trim().isNotEmpty) ...[
                   GestureDetector(
                     onTap: () => _mostrarImagenAmpliada(context, comprobanteUrl.toString()),
@@ -162,7 +162,7 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
                   const SizedBox(width: 12),
                 ],
 
-                // Información textual
+                // Textos detallados
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,7 +206,7 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
               ],
             ),
 
-            // Botones de administrador: Se ocultan inmediatamente al presionar uno
+            // Botones de administrador
             if (esAdminPedido && !_accionRealizada) ...[
               const SizedBox(height: 14),
               const Divider(color: Color(0xFFE0E0E0), height: 1),
