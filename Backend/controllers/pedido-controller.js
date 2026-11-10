@@ -133,12 +133,14 @@ export const crear = async (req, res) => {
             return res.status(500).json({ error: errorPedido.message });
         }
 
-        // 4. Registrar pago (con captura de error explícita)
+       // 4. Registrar pago (forzando minúsculas para evitar el error de la regla chk_metodo_pago)
+        const metodoPagoLimpio = (metodo_pago || "nequi").toLowerCase();
+
         const { data: pagoInsertado, error: errorPago } = await supabase
             .from("pagos")
             .insert([{
                 id_pedido: nuevoPedido.id_pedido,
-                metodo_pago: metodo_pago || "Nequi",
+                metodo_pago: metodoPagoLimpio, // <-- Se envía en minúsculas ("nequi")
                 valor: total,
                 estado: "PENDIENTE",
                 comprobante: urlComprobanteFinal,
@@ -148,10 +150,7 @@ export const crear = async (req, res) => {
 
         if (errorPago) {
             console.error("❌ ERROR AL INSERTAR EN PAGOS:", errorPago.message);
-            console.error("Detalle completo:", JSON.stringify(errorPago));
             return res.status(500).json({ error: `Error en pagos: ${errorPago.message}` });
-        } else {
-            console.log("✅ Pago insertado correctamente:", pagoInsertado);
         }
        
 
