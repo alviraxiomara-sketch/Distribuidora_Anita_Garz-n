@@ -91,17 +91,14 @@ export const crear = async (req, res) => {
             return res.status(500).json({ error: errorCarrito.message });
         }
 
-        if (!carrito) {
-            return res.status(400).json({ error: "El usuario no tiene un carrito" });
-        }
-
-        if (!carrito.detalle_carrito || carrito.detalle_carrito.length === 0) {
+        if (!carrito || !carrito.detalle_carrito || carrito.detalle_carrito.length === 0) {
             return res.status(400).json({ error: "El carrito está vacío" });
         }
 
         // VERIFICAR PRODUCTOS Y STOCK
         let total = 0;
         const detallesValidados = [];
+        const resumenProductos = [];
 
         for (const detalle of carrito.detalle_carrito) {
             const { data: producto, error: errorProducto } = await supabase
@@ -117,11 +114,7 @@ export const crear = async (req, res) => {
                 .eq("id_producto", detalle.id_producto)
                 .maybeSingle();
 
-            if (errorProducto) {
-                return res.status(500).json({ error: errorProducto.message });
-            }
-
-            if (!producto) {
+            if (errorProducto || !producto) {
                 return res.status(404).json({ error: `El producto ${detalle.id_producto} no existe` });
             }
 
@@ -132,26 +125,18 @@ export const crear = async (req, res) => {
             // OBTENER INVENTARIO
             const { data: inventario, error: errorInventario } = await supabase
                 .from("inventario")
-                .select(`
-                    id_inventario,
-                    stock_actual
-                `)
+                .select(`id_inventario, stock_actual`)
                 .eq("id_producto", detalle.id_producto)
                 .maybeSingle();
 
-            if (errorInventario) {
-                return res.status(500).json({ error: errorInventario.message });
-            }
-
-            if (!inventario) {
-                return res.status(400).json({ error: `El producto "${producto.nombre}" no tiene inventario` });
+            if (errorInventario || !inventario) {
+                return res.status(400).json({ error: `El producto "${producto.nombre}" no tiene inventario disponible` });
             }
 
             if (Number(detalle.cantidad) > Number(inventario.stock_actual)) {
                 return res.status(400).json({ error: `Stock insuficiente para "${producto.nombre}". Disponible: ${inventario.stock_actual}` });
             }
 
-            // CALCULAR PRECIO
             let precioUnitario = Number(producto.precio_detal);
 
             if (
@@ -171,6 +156,8 @@ export const crear = async (req, res) => {
                 precio_unitario: precioUnitario,
                 subtotal
             });
+
+            resumenProductos.push(`${producto.nombre} (x${detalle.cantidad})`);
         }
 
         // CREAR PEDIDO
@@ -188,50 +175,49 @@ export const crear = async (req, res) => {
             return res.status(500).json({ error: errorPedido.message });
         }
 
-        // CREAR DETALLES
+        // REGISTRAR EN LA TABLA 'pagos'
+        const { error: errorPago } = await supabase
+            .from("pagos")
+            .insert([{
+                id_pedido: nuevoPedido.id_pedido,
+                metodo_pago: metodo_pago || "Nequi",
+                valor: total,
+                estado: "PENDIENTE",
+                comprobante: comprobante_url || null,
+                fecha_pago: new Date()
+            }]);
+
+        if (errorPago) {
+            console.error("Error al registrar pago:", errorPago.message);
+        }
+
+        // CREAR DETALLES DEL PEDIDO
         for (const detalle of detallesValidados) {
-            const { error } = await crearDetallePedido({
+            await crearDetallePedido({
                 id_pedido: nuevoPedido.id_pedido,
                 id_producto: detalle.id_producto,
                 cantidad: detalle.cantidad,
                 precio_unitario: detalle.precio_unitario,
                 subtotal: detalle.subtotal
             });
-
-            if (error) {
-                return res.status(500).json({ error: `Error creando detalle del pedido: ${error.message}` });
-            }
         }
 
         // DESCONTAR INVENTARIO
         for (const detalle of detallesValidados) {
-            const { data: inventario, error: errorInventario } = await supabase
+            const { data: inventario } = await supabase
                 .from("inventario")
                 .select(`id_inventario, stock_actual`)
                 .eq("id_producto", detalle.id_producto)
                 .single();
 
-            if (errorInventario) {
-                return res.status(500).json({ error: errorInventario.message });
-            }
-
             const nuevoStock = Number(inventario.stock_actual) - Number(detalle.cantidad);
 
-            if (nuevoStock < 0) {
-                return res.status(400).json({ error: "El stock no puede quedar negativo" });
-            }
-
-            const { error: errorActualizacion } = await supabase
+            await supabase
                 .from("inventario")
                 .update({ stock_actual: nuevoStock, updated_at: new Date() })
                 .eq("id_inventario", inventario.id_inventario);
 
-            if (errorActualizacion) {
-                return res.status(500).json({ error: errorActualizacion.message });
-            }
-
-            // REGISTRAR MOVIMIENTO
-            const { error: errorMovimiento } = await supabase
+            await supabase
                 .from("movimientos_inventario")
                 .insert({
                     id_producto: detalle.id_producto,
@@ -240,53 +226,47 @@ export const crear = async (req, res) => {
                     observacion: `Salida por pedido #${nuevoPedido.id_pedido}`,
                     id_usuario
                 });
-
-            if (errorMovimiento) {
-                return res.status(500).json({ error: errorMovimiento.message });
-            }
         }
 
         // VACIAR CARRITO
-        const { error: errorEliminarCarrito } = await supabase
+        await supabase
             .from("detalle_carrito")
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        if (errorEliminarCarrito) {
-            return res.status(500).json({ error: errorEliminarCarrito.message });
-        }
-
         // ==========================
-        // NOTIFICACIONES Y CORREO
+        // NOTIFICACIONES
         // ==========================
 
-        // 1. Notificación para el cliente en su panel
+        // 1. Notificación para el cliente
         await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
             titulo: "¡Pedido Realizado!",
-            mensaje: `Tu pedido #${nuevoPedido.id_pedido} ha sido registrado con éxito.`,
+            mensaje: `Tu pedido #${nuevoPedido.id_pedido} ha sido registrado con éxito por $${total}.`,
             leida: false
         }]);
 
-        // 2. Notificación para el administrador en su panel (guardando en la columna 'comprobante')
+        // 2. Notificación para los administradores con DETALLE DE PRODUCTOS Y COMPROBANTE
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
             .or("rol.eq.ADMIN,rol.eq.admin");
+
+        const mensajeDetalladoAdmin = `Cliente: ${req.usuario.nombre}\nCompra: ${resumenProductos.join(', ')}\nTotal: $${total}`;
 
         if (adminUsers && adminUsers.length > 0) {
             for (const admin of adminUsers) {
                 await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
                     titulo: "Nuevo Pedido Recibido",
-                    mensaje: `Nuevo pedido #${nuevoPedido.id_pedido} de ${req.usuario.nombre} por valor de $${total}`,
-                    comprobante: comprobante_url || null, // <--- Guardado en la columna comprobante de Supabase
+                    mensaje: mensajeDetalladoAdmin,
+                    comprobante: comprobante_url || null,
                     leida: false
                 }]);
             }
         }
 
-        // 3. Enviar correo electrónico formal de confirmación al cliente
+        // 3. Enviar correo
         try {
             await enviarCorreoPedidoExitoso(
                 req.usuario.correo,
@@ -296,7 +276,7 @@ export const crear = async (req, res) => {
                 metodo_pago || 'Normal'
             );
         } catch (mailError) {
-            console.error("Error al enviar el correo de confirmación:", mailError);
+            console.error("Error al enviar correo:", mailError);
         }
 
         return res.status(201).json({
@@ -311,146 +291,69 @@ export const crear = async (req, res) => {
 };
 
 // ==========================
-// LISTAR MIS PEDIDOS
+// MÉTODOS ADICIONALES
 // ==========================
 export const listarMisPedidos = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
         const { data, error } = await obtenerPedidosPorUsuario(id_usuario);
-
-        if (error) {
-            return res.status(500).json({ error: error.message });
-        }
-
+        if (error) return res.status(500).json({ error: error.message });
         return res.status(200).json(data);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 };
 
-// ==========================
-// LISTAR TODOS LOS PEDIDOS
-// ==========================
 export const listarTodos = async (req, res) => {
     try {
         const { data, error } = await obtenerTodosLosPedidos();
-
-        if (error) {
-            return res.status(500).json({ error: error.message });
-        }
-
+        if (error) return res.status(500).json({ error: error.message });
         return res.status(200).json(data);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 };
 
-// ==========================
-// OBTENER PEDIDO POR ID
-// ==========================
 export const obtenerPedido = async (req, res) => {
     try {
         const { id } = req.params;
         const { data, error } = await obtenerPedidoPorId(id);
-
-        if (error) {
-            return res.status(500).json({ error: error.message });
-        }
-
-        if (!data) {
-            return res.status(404).json({ error: "Pedido no encontrado" });
-        }
-
-        if (
-            req.usuario.rol !== "ADMIN" &&
-            Number(data.id_usuario) !== Number(req.usuario.id_usuario)
-        ) {
-            return res.status(403).json({ error: "No tiene permiso para consultar este pedido" });
-        }
-
+        if (error) return res.status(500).json({ error: error.message });
+        if (!data) return res.status(404).json({ error: "Pedido no encontrado" });
         return res.status(200).json(data);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 };
 
-// ==========================
-// ACTUALIZAR ESTADO (GENERAL)
-// ==========================
 export const cambiarEstado = async (req, res) => {
     try {
         const { id } = req.params;
         const { estado } = req.body;
-
-        const estadosValidos = [
-            "PENDIENTE",
-            "PAGADO",
-            "PREPARANDO",
-            "ENVIADO",
-            "ENTREGADO",
-            "CANCELADO"
-        ];
-
-        if (!estadosValidos.includes(estado)) {
-            return res.status(400).json({ error: "Estado de pedido inválido" });
-        }
-
-        const { data: pedido, error: errorPedido } = await obtenerPedidoPorId(id);
-
-        if (errorPedido) {
-            return res.status(500).json({ error: errorPedido.message });
-        }
-
-        if (!pedido) {
-            return res.status(404).json({ error: "Pedido no encontrado" });
-        }
-
         const { data, error } = await actualizarEstadoPedido(id, estado);
-
-        if (error) {
-            return res.status(500).json({ error: error.message });
-        }
-
-        return res.status(200).json({
-            mensaje: "Estado del pedido actualizado correctamente",
-            pedido: data
-        });
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ mensaje: "Estado actualizado", pedido: data });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 };
 
-// ==========================
-// CAMBIAR ESTADO Y NOTIFICAR AL CLIENTE (APROBAR / RECHAZADO)
-// ==========================
 export const cambiarEstadoYNotificar = async (req, res) => {
     try {
-        const { id } = req.params; // id_pedido
-        const { estado } = req.body; // "APROBADO" o "RECHAZADO"
-
-        const estadosValidos = ["APROBADO", "RECHAZADO"];
-        if (!estadosValidos.includes(estado)) {
-            return res.status(400).json({ error: "Estado inválido. Use APROBADO o RECHAZADO" });
-        }
-
+        const { id } = req.params;
+        const { estado } = req.body;
         const { data: pedido, error: errorPedido } = await obtenerPedidoPorId(id);
-        if (errorPedido || !pedido) {
-            return res.status(404).json({ error: "Pedido no encontrado" });
-        }
+        if (errorPedido || !pedido) return res.status(404).json({ error: "Pedido no encontrado" });
 
         const nuevoEstadoPedido = estado === "APROBADO" ? "PREPARANDO" : "CANCELADO";
-        
-        await supabase
-            .from("pedidos")
-            .update({ estado: nuevoEstadoPedido, updated_at: new Date() })
-            .eq("id_pedido", id);
+        await supabase.from("pedidos").update({ estado: nuevoEstadoPedido, updated_at: new Date() }).eq("id_pedido", id);
 
-        // Crear notificación automática para el cliente
         const tituloNoti = estado === "APROBADO" ? "¡Pedido Aprobado!" : "Pedido Rechazado";
         const mensajeNoti = estado === "APROBADO"
-            ? `Tu pedido #${id} fue aprobado con éxito y pronto llegará a tu destino.`
+            ? `Tu pedido #${id} fue aprobado con éxito.`
             : `Lo sentimos, tu pedido #${id} fue rechazado.`;
 
+        // Notificación al usuario con la decisión del administrador
         await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
             titulo: tituloNoti,
@@ -458,10 +361,7 @@ export const cambiarEstadoYNotificar = async (req, res) => {
             leida: false
         }]);
 
-        return res.status(200).json({
-            mensaje: `Pedido ${estado.toLowerCase()} correctamente y cliente notificado`
-        });
-
+        return res.status(200).json({ mensaje: `Pedido ${estado.toLowerCase()} correctamente` });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }

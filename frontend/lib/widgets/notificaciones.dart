@@ -33,7 +33,7 @@ class BadgePedidos extends StatelessWidget {
   }
 }
 
-class NotificacionItemCard extends StatelessWidget {
+class NotificacionItemCard extends StatefulWidget {
   final Map<String, dynamic> notificacion;
   final VoidCallback onDelete;
   final Function(String nuevoEstado)? onCambiarEstado;
@@ -45,7 +45,15 @@ class NotificacionItemCard extends StatelessWidget {
     this.onCambiarEstado,
   });
 
-  // Visor de imagen ampliada con botón "X"
+  @override
+  State<NotificacionItemCard> createState() => _NotificacionItemCardState();
+}
+
+class _NotificacionItemCardState extends State<NotificacionItemCard> {
+  bool _accionRealizada = false;
+  String? _estadoSeleccionado;
+
+  // Pantalla emergente para ver la foto en grande con zoom táctil
   void _mostrarImagenAmpliada(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -61,7 +69,7 @@ class NotificacionItemCard extends StatelessWidget {
                   imageUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Text(
-                    'No se pudo cargar la imagen del comprobante',
+                    'No se pudo cargar el comprobante',
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
@@ -83,14 +91,14 @@ class NotificacionItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String titulo = notificacion['titulo'] ?? 'Nuevo Pedido';
-    final String mensaje = notificacion['mensaje'] ?? 'Sin detalles del pedido';
+    final String titulo = widget.notificacion['titulo'] ?? 'Nuevo Pedido';
+    final String mensaje = widget.notificacion['mensaje'] ?? 'Sin detalles';
     
-    // Lectura directa de la columna 'comprobante' de la base de datos
-    final String? comprobanteUrl = notificacion['comprobante'] ?? 
-                                   notificacion['imagen_url'];
+    // Lectura directa de la columna 'comprobante'
+    final String? comprobanteUrl = widget.notificacion['comprobante'] ?? 
+                                   widget.notificacion['imagen_url'];
     
-    final bool esAdminPedido = mensaje.toLowerCase().contains('pedido') && onCambiarEstado != null;
+    final bool esAdminPedido = widget.onCambiarEstado != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -114,7 +122,7 @@ class NotificacionItemCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Miniatura del comprobante (si existe)
+                // Miniatura con enlace para ver la foto en zoom
                 if (comprobanteUrl != null && comprobanteUrl.toString().trim().isNotEmpty) ...[
                   GestureDetector(
                     onTap: () => _mostrarImagenAmpliada(context, comprobanteUrl.toString()),
@@ -122,8 +130,8 @@ class NotificacionItemCard extends StatelessWidget {
                       alignment: Alignment.bottomRight,
                       children: [
                         Container(
-                          width: 60,
-                          height: 60,
+                          width: 65,
+                          height: 65,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: const Color(0xFF00A8FF), width: 2),
@@ -154,13 +162,13 @@ class NotificacionItemCard extends StatelessWidget {
                   const SizedBox(width: 12),
                 ],
 
-                // Textos
+                // Información textual
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Corregido correctamente
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
                             child: Text(
@@ -173,7 +181,7 @@ class NotificacionItemCard extends StatelessWidget {
                             ),
                           ),
                           InkWell(
-                            onTap: onDelete,
+                            onTap: widget.onDelete,
                             borderRadius: BorderRadius.circular(20),
                             child: const Padding(
                               padding: EdgeInsets.all(4.0),
@@ -198,8 +206,8 @@ class NotificacionItemCard extends StatelessWidget {
               ],
             ),
 
-            // Botones de administrador
-            if (esAdminPedido) ...[
+            // Botones de administrador: Se ocultan inmediatamente al presionar uno
+            if (esAdminPedido && !_accionRealizada) ...[
               const SizedBox(height: 14),
               const Divider(color: Color(0xFFE0E0E0), height: 1),
               const SizedBox(height: 12),
@@ -207,7 +215,13 @@ class NotificacionItemCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => onCambiarEstado!('RECHAZADO'),
+                    onPressed: () {
+                      setState(() {
+                        _accionRealizada = true;
+                        _estadoSeleccionado = 'RECHAZADO';
+                      });
+                      widget.onCambiarEstado!('RECHAZADO');
+                    },
                     icon: const Icon(Icons.cancel_outlined, color: Colors.red, size: 16),
                     label: const Text('Rechazar', style: TextStyle(color: Colors.red, fontSize: 12)),
                     style: OutlinedButton.styleFrom(
@@ -218,7 +232,13 @@ class NotificacionItemCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
-                    onPressed: () => onCambiarEstado!('APROBADO'),
+                    onPressed: () {
+                      setState(() {
+                        _accionRealizada = true;
+                        _estadoSeleccionado = 'APROBADO';
+                      });
+                      widget.onCambiarEstado!('APROBADO');
+                    },
                     icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 16),
                     label: const Text('Aprobar', style: TextStyle(color: Colors.white, fontSize: 12)),
                     style: ElevatedButton.styleFrom(
@@ -229,6 +249,25 @@ class NotificacionItemCard extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ] else if (_accionRealizada) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _estadoSeleccionado == 'APROBADO' ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _estadoSeleccionado == 'APROBADO' 
+                      ? '✓ Pedido aprobado y notificado al cliente' 
+                      : '✗ Pedido rechazado y notificado al cliente',
+                  style: TextStyle(
+                    color: _estadoSeleccionado == 'APROBADO' ? Colors.green : Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ],
