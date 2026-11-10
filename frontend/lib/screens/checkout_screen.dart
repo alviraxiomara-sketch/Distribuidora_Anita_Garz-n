@@ -34,7 +34,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _direccionController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
 
-  String? _metodoPago; // Inicia nulo para aparecer vacío
+  String? _metodoPago;
   File? _comprobanteImagen;
   Uint8List? _comprobanteBytes;
   bool _procesando = false;
@@ -117,9 +117,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw Exception('No has iniciado sesión');
       }
 
+      String? comprobanteUrl;
+
+      // =========================================================================
+      // GENERAR O ASIGNAR LA URL DEL COMPROBANTE SI EL MÉTODO ES NEQUI
+      // =========================================================================
+      if (_metodoPago == 'Nequi') {
+        comprobanteUrl = "https://tu-bucket-supabase.supabase.co/storage/v1/object/public/comprobantes/comprobante_${DateTime.now().millisecondsSinceEpoch}.jpg";
+      }
+
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
       
-      // Enviamos la petición directamente a tu backend Node.js
+      // Enviamos todos los datos incluyendo la URL del comprobante al backend
       final response = await http.post(
         url,
         headers: {
@@ -130,6 +139,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'direccion_entrega': _direccionController.text,
           'telefono_contacto': _telefonoController.text,
           'metodo_pago': _metodoPago,
+          'comprobante_url': comprobanteUrl, // <--- Enviado hacia el backend
         }),
       );
 
@@ -238,7 +248,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   final nombre = producto['nombre'] ?? 'Producto';
                   final presentacion = producto['presentacion'] ?? '';
                   final imagenUrl = producto['imagen_url'] ?? '';
-                  final cantidad = item['cantidad'] ?? 1;
                   final subtotal = item['subtotal'] ?? 0;
 
                   return Container(
@@ -265,7 +274,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             children: [
                               Text(nombre.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                               const SizedBox(height: 2),
-                              Text('$presentacion | Cant: $cantidad', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                              Text('$presentacion', style: const TextStyle(color: Colors.white70, fontSize: 11)),
                             ],
                           ),
                         ),
@@ -279,29 +288,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 },
               ),
 
-              const SizedBox(height: 10),
-              
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF063B5D),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF00A2E8), width: 1.5),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total a pagar:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text(
-                      '\$${widget.totalPagar.toStringAsFixed(0)}',
-                      style: const TextStyle(color: Color(0xFF00A8FF), fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 16),
-
               CheckoutFormFields(
                 nombreController: _nombreController,
                 direccionController: _direccionController,
@@ -322,26 +309,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
 
               const SizedBox(height: 25),
-
               ElevatedButton(
                 onPressed: _procesando ? null : _realizarPedido,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00A8FF),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _procesando
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Realizar Pedido',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    : const Text('Realizar Pedido', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

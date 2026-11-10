@@ -45,7 +45,7 @@ class NotificacionItemCard extends StatelessWidget {
     this.onCambiarEstado,
   });
 
-  // Visor de imagen ampliada del comprobante con botón de cierre "X"
+  // Visor de imagen ampliada con botón "X"
   void _mostrarImagenAmpliada(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -86,10 +86,9 @@ class NotificacionItemCard extends StatelessWidget {
     final String titulo = notificacion['titulo'] ?? 'Nuevo Pedido';
     final String mensaje = notificacion['mensaje'] ?? 'Sin detalles del pedido';
     
-    // Leemos directamente de la columna 'comprobante' que creamos en la base de datos
+    // Lectura directa de la columna 'comprobante' de la base de datos
     final String? comprobanteUrl = notificacion['comprobante'] ?? 
-                                   notificacion['imagen_url'] ?? 
-                                   notificacion['screenshot'];
+                                   notificacion['imagen_url'];
     
     final bool esAdminPedido = mensaje.toLowerCase().contains('pedido') && onCambiarEstado != null;
 
@@ -115,7 +114,7 @@ class NotificacionItemCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Miniatura del comprobante de Nequi (si existe en la BD)
+                // Miniatura del comprobante (si existe)
                 if (comprobanteUrl != null && comprobanteUrl.toString().trim().isNotEmpty) ...[
                   GestureDetector(
                     onTap: () => _mostrarImagenAmpliada(context, comprobanteUrl.toString()),
@@ -155,18 +154,18 @@ class NotificacionItemCard extends StatelessWidget {
                   const SizedBox(width: 12),
                 ],
 
-                // Textos de la notificación
+                // Textos
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // <--- Corregido aquí
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Corregido correctamente
                         children: [
                           Expanded(
                             child: Text(
                               titulo,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Color(0xFF031A2E),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -199,7 +198,7 @@ class NotificacionItemCard extends StatelessWidget {
               ],
             ),
 
-            // Botones de Aprobar y Rechazar para el Admin
+            // Botones de administrador
             if (esAdminPedido) ...[
               const SizedBox(height: 14),
               const Divider(color: Color(0xFFE0E0E0), height: 1),
