@@ -1,4 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/notificaciones_cliente.dart';
+import 'package:frontend/services/api_config.dart';
 
 class BadgePedidos extends StatelessWidget {
   const BadgePedidos({super.key});
@@ -93,7 +98,6 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
     final String titulo = widget.notificacion['titulo'] ?? 'Nuevo Pedido';
     final String mensaje = widget.notificacion['mensaje'] ?? 'Sin detalles';
     
-    // Lectura robusta del comprobante desde diferentes campos posibles de la BD
     final String? comprobanteUrl = widget.notificacion['comprobante'] ?? 
                                    widget.notificacion['imagen_url'] ??
                                    widget.notificacion['comprobante_url'];
@@ -122,7 +126,6 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Miniatura del comprobante real
                 if (comprobanteUrl != null && comprobanteUrl.toString().trim().isNotEmpty) ...[
                   GestureDetector(
                     onTap: () => _mostrarImagenAmpliada(context, comprobanteUrl.toString()),
@@ -162,7 +165,6 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
                   const SizedBox(width: 12),
                 ],
 
-                // Textos detallados
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,7 +208,6 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
               ],
             ),
 
-            // Botones de administrador
             if (esAdminPedido && !_accionRealizada) ...[
               const SizedBox(height: 14),
               const Divider(color: Color(0xFFE0E0E0), height: 1),
@@ -273,6 +274,105 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ==========================
+// CAMPANA DE NOTIFICACIONES CON BADGE DINÁMICO
+// ==========================
+class NotificationBadgeIcon extends StatefulWidget {
+  const NotificationBadgeIcon({super.key});
+
+  @override
+  State<NotificationBadgeIcon> createState() => _NotificationBadgeIconState();
+}
+
+class _NotificationBadgeIconState extends State<NotificationBadgeIcon> {
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _obtenerNotificacionesNoLeidas();
+  }
+
+  Future<void> _obtenerNotificacionesNoLeidas() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        List<dynamic> lista = [];
+
+        if (decoded is List) {
+          lista = decoded;
+        } else if (decoded is Map) {
+          lista = decoded['data'] ?? decoded['notificaciones'] ?? [];
+        }
+
+        int noLeidas = lista.where((item) {
+          final bool leido = item['leido'] ?? item['leida'] ?? false;
+          return !leido;
+        }).length;
+
+        setState(() {
+          _unreadCount = noLeidas;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+            );
+            _obtenerNotificacionesNoLeidas();
+          },
+        ),
+        if (_unreadCount > 0)
+          Positioned(
+            right: 6,
+            top: 6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Text(
+                '$_unreadCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

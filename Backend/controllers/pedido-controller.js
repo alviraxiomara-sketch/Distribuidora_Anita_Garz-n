@@ -1,17 +1,9 @@
 import { supabase } from "../config/supabase.js";
 import { enviarCorreoPedidoExitoso } from "../services/notificacion-service.js";
 
-// Función auxiliar con depuración extrema para Supabase Storage
 const subirComprobanteAStorage = async (base64Data) => {
-    if (!base64Data) {
-        console.log("⚠️ [Storage] No se proporcionó ninguna cadena de comprobante.");
-        return null;
-    }
-
-    if (base64Data.startsWith('http://') || base64Data.startsWith('https://')) {
-        console.log("ℹ️ [Storage] El comprobante ya es una URL web:", base64Data);
-        return base64Data;
-    }
+    if (!base64Data) return null;
+    if (base64Data.startsWith('http://') || base64Data.startsWith('https://')) return base64Data;
 
     try {
         let buffer;
@@ -29,30 +21,18 @@ const subirComprobanteAStorage = async (base64Data) => {
         const fileUint8Array = new Uint8Array(buffer);
         const fileName = `comprobante_${Date.now()}.jpg`;
 
-        console.log(`📤 [Storage] Subiendo imagen al bucket 'comprobantes' (${fileName}), tamaño: ${fileUint8Array.length} bytes...`);
-
         const { data: uploadData, error: errorStorage } = await supabase.storage
             .from('comprobantes')
-            .upload(fileName, fileUint8Array, {
-                contentType,
-                upsert: true
-            });
+            .upload(fileName, fileUint8Array, { contentType, upsert: true });
 
-        if (errorStorage) {
-            console.error("❌ [Storage] ERROR DE SUPABASE STORAGE:", errorStorage.message);
-            return null;
-        }
-
-        console.log("✅ [Storage] Imagen subida exitosamente a Supabase:", uploadData);
+        if (errorStorage) return null;
 
         const { data: publicUrlData } = supabase.storage
             .from('comprobantes')
             .getPublicUrl(fileName);
 
-        console.log("🔗 [Storage] URL pública generada:", publicUrlData.publicUrl);
         return publicUrlData.publicUrl;
     } catch (err) {
-        console.error("❌ [Storage] EXCEPCIÓN CRÍTICA procesando la imagen:", err.message);
         return null;
     }
 };
@@ -62,28 +42,15 @@ export const crear = async (req, res) => {
         const id_usuario = req.usuario.id_usuario;
         const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
 
-        console.log("📥 [Pedido] Solicitud recibida en el backend:", {
-            id_usuario,
-            metodo_pago,
-            direccion_entrega,
-            telefono_contacto,
-            tieneComprobanteUrl: !!comprobante_url,
-            largoComprobanteUrl: comprobante_url ? comprobante_url.length : 0
-        });
-
         if (!direccion_entrega || !telefono_contacto) {
             return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
         }
 
-        // 1. Procesar comprobante
         let urlComprobanteFinal = null;
         if (comprobante_url) {
             urlComprobanteFinal = await subirComprobanteAStorage(comprobante_url);
-        } else {
-            console.log("⚠️ [Pedido] Atencion: 'comprobante_url' llegó vacío o nulo desde el cliente.");
         }
 
-        // 2. Obtener y validar el carrito del usuario
         const { data: carrito, error: errorCarrito } = await supabase
             .from("carrito")
             .select(`
@@ -147,7 +114,6 @@ export const crear = async (req, res) => {
             resumenProductos.push(`${producto.nombre}${detalleExtra} x${detalle.cantidad}`);
         }
 
-        // 3. Crear el pedido principal
         const { data: nuevoPedido, error: errorPedido } = await supabase
             .from("pedidos")
             .insert([{
@@ -160,14 +126,9 @@ export const crear = async (req, res) => {
             .select()
             .single();
 
-        if (errorPedido) {
-            return res.status(500).json({ error: errorPedido.message });
-        }
+        if (errorPedido) return res.status(500).json({ error: errorPedido.message });
 
-        // 4. Registrar pago guardando la URL del comprobante en la columna 'comprobantes'
         const metodoPagoLimpio = (metodo_pago || "nequi").toLowerCase();
-
-        console.log(`💾 [Base de Datos] Insertando en pagos -> ID Pedido: ${nuevoPedido.id_pedido}, Comprobante a guardar:`, urlComprobanteFinal);
 
         const { error: errorPago } = await supabase
             .from("pagos")
@@ -180,12 +141,8 @@ export const crear = async (req, res) => {
                 fecha_pago: new Date().toISOString()
             }]);
 
-        if (errorPago) {
-            console.error("❌ [Base de Datos] ERROR AL INSERTAR EN PAGOS:", errorPago.message);
-            return res.status(500).json({ error: `Error en pagos: ${errorPago.message}` });
-        }
+        if (errorPago) return res.status(500).json({ error: `Error en pagos: ${errorPago.message}` });
 
-        // 5. Insertar detalles del pedido
         for (const detalle of detallesValidados) {
             await supabase.from("detalle_pedido").insert([{
                 id_pedido: nuevoPedido.id_pedido,
@@ -196,7 +153,6 @@ export const crear = async (req, res) => {
             }]);
         }
 
-        // 6. Descontar inventario
         for (const detalle of detallesValidados) {
             const { data: inventario } = await supabase
                 .from("inventario")
@@ -213,13 +169,12 @@ export const crear = async (req, res) => {
             }
         }
 
-        // 7. Vaciar carrito
         await supabase
             .from("detalle_carrito")
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // 8. Notificaciones para administradores
+        // Notificación Admin (Novedad de pedido)
         const { data: adminUsers } = await supabase
             .from("usuarios")
             .select("id_usuario")
@@ -239,7 +194,7 @@ export const crear = async (req, res) => {
             }
         }
 
-        // 9. Notificación automática para el cliente
+        // Notificación Cliente (Registro no leído)
         const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} (${resumenProductos.join(', ')}) fue realizado con éxito y está en revisión.`;
         await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
@@ -264,7 +219,6 @@ export const crear = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ [Servidor] Excepción general en crear pedido:", error);
         return res.status(500).json({ error: error.message });
     }
 };
@@ -355,7 +309,6 @@ export const cambiarEstadoYNotificar = async (req, res) => {
             ? `Tu pedido #${id} fue aprobado con éxito.`
             : `Lo sentimos, tu pedido #${id} fue rechazado.`;
 
-        // Se inserta correctamente sin enviar columnas ajenas a la tabla 'notificaciones'
         await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
             titulo: tituloNoti,
