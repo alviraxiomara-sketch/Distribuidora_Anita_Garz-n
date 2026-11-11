@@ -176,7 +176,7 @@ export const crear = async (req, res) => {
                 metodo_pago: metodoPagoLimpio,
                 valor: total,
                 estado: "PENDIENTE",
-                comprobantes: urlComprobanteFinal, // <--- Ajustado a 'comprobantes' (plural)
+                comprobantes: urlComprobanteFinal,
                 fecha_pago: new Date().toISOString()
             }]);
 
@@ -231,7 +231,6 @@ export const crear = async (req, res) => {
             for (const admin of adminUsers) {
                 await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
-                    id_pedido: nuevoPedido.id_pedido,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeAdmin,
                     comprobante: urlComprobanteFinal,
@@ -239,6 +238,15 @@ export const crear = async (req, res) => {
                 }]);
             }
         }
+
+        // 9. Notificación automática para el cliente
+        const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} (${resumenProductos.join(', ')}) fue realizado con éxito y está en revisión.`;
+        await supabase.from("notificaciones").insert([{
+            id_usuario: id_usuario,
+            titulo: "¡Pedido Realizado con Éxito!",
+            mensaje: mensajeCliente,
+            leida: false
+        }]);
 
         try {
             await enviarCorreoPedidoExitoso(
@@ -347,9 +355,9 @@ export const cambiarEstadoYNotificar = async (req, res) => {
             ? `Tu pedido #${id} fue aprobado con éxito.`
             : `Lo sentimos, tu pedido #${id} fue rechazado.`;
 
+        // Se inserta correctamente sin enviar columnas ajenas a la tabla 'notificaciones'
         await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
-            id_pedido: id,
             titulo: tituloNoti,
             mensaje: mensajeNoti,
             leida: false
