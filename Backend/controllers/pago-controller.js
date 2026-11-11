@@ -176,6 +176,11 @@ export const crear = async (req, res) => {
         }
 
         // ==========================
+        // OBTENER URL DE LA IMAGEN (CLOUDINARY)
+        // ==========================
+        const comprobanteUrl = req.file ? req.file.path : null;
+
+        // ==========================
         // CREAR PAGO
         // ==========================
 
@@ -192,7 +197,10 @@ export const crear = async (req, res) => {
                 "PENDIENTE",
 
             referencia:
-                referencia || null
+                referencia || null,
+
+            comprobantes: 
+                comprobanteUrl // <--- Guardamos la URL generada en Cloudinary en la BD
 
         };
 
