@@ -85,9 +85,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _realizarPedido() async {
-    print('DEBUG - Botón "Realizar Pedido" presionado');
+    print('🛑 [CHECKOUT] Entró a _realizarPedido');
 
     if (!_formKey.currentState!.validate()) {
+      print('❌ [CHECKOUT] El formulario falló la validación');
       _mostrarAlerta(
         "Formulario incompleto",
         "Por favor completa todos los campos obligatorios de entrega.",
@@ -96,6 +97,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     if (_metodoPago == null) {
+      print('❌ [CHECKOUT] Falta seleccionar el método de pago');
       _mostrarAlerta(
         "Método de pago requerido",
         "Por favor seleccione un método de pago antes de continuar.",
@@ -106,12 +108,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final esNequi = _metodoPago!.toLowerCase() == 'nequi';
 
     if (esNequi && _comprobanteImagen == null && _comprobanteBytes == null) {
+      print('❌ [CHECKOUT] Falta comprobante de Nequi');
       _mostrarAlerta(
         "Comprobante faltante",
         "Has seleccionado Nequi. Por favor adjunta el comprobante de pago.",
       );
       return;
     }
+
+    print('✅ [CHECKOUT] Validaciones superadas, enviando petición HTTP...');
 
     setState(() => _procesando = true);
 
@@ -136,7 +141,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
-      print('DEBUG - Enviando petición POST a: $url');
+      print('🚀 [CHECKOUT] Enviando petición POST a: $url');
 
       final response = await http.post(
         url,
@@ -178,7 +183,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
     } catch (e) {
-      print('DEBUG - Excepción atrapada en _realizarPedido: $e');
+      print('🔴 [FLUTTER ERROR DETALLADO]: $e');
       if (!mounted) return;
       _mostrarAlerta("Error al procesar", "$e");
     } finally {
