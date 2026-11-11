@@ -85,9 +85,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _realizarPedido() async {
-    if (!_formKey.currentState!.validate()) return;
+    print('DEBUG - Botón "Realizar Pedido" presionado');
+
+    if (!_formKey.currentState!.validate()) {
+      print('DEBUG - Error: El formulario tiene campos obligatorios vacíos o inválidos.');
+      return;
+    }
 
     if (_metodoPago == null) {
+      print('DEBUG - Error: No se seleccionó método de pago.');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor seleccione un método de pago'),
@@ -100,6 +106,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final esNequi = _metodoPago!.toLowerCase() == 'nequi';
 
     if (esNequi && _comprobanteImagen == null && _comprobanteBytes == null) {
+      print('DEBUG - Error: Falta adjuntar comprobante de Nequi.');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor adjunta el comprobante de pago de Nequi'),
@@ -121,9 +128,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       String? comprobanteBase64;
 
-      // =========================================================================
-      // CORRECCIÓN: CONVERSIÓN FLEXIBLE A BASE64 (MAYÚSCULAS/MINÚSCULAS)
-      // =========================================================================
       if (esNequi) {
         if (kIsWeb && _comprobanteBytes != null) {
           comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(_comprobanteBytes!)}';
@@ -137,6 +141,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print('DEBUG - ¿Se generó Base64 del comprobante?: ${comprobanteBase64 != null}');
 
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
+      print('DEBUG - Enviando petición POST a: $url');
       
       final response = await http.post(
         url,
@@ -149,9 +154,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'direccion_entrega': _direccionController.text,
           'telefono_contacto': _telefonoController.text,
           'metodo_pago': _metodoPago,
-          'comprobante_url': comprobanteBase64, // <--- Envío directo del Base64
+          'comprobante_url': comprobanteBase64,
         }),
       );
+
+      print('DEBUG - Código de respuesta HTTP: ${response.statusCode}');
+      print('DEBUG - Cuerpo de respuesta HTTP: ${response.body}');
 
       final responseData = jsonDecode(response.body);
 
@@ -174,6 +182,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw Exception(responseData['error'] ?? 'Error al procesar el pedido');
       }
     } catch (e) {
+      print('DEBUG - Excepción atrapada en _realizarPedido: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -298,7 +307,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 },
               ),
 
-              // TARJETA DEL TOTAL A PAGAR
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

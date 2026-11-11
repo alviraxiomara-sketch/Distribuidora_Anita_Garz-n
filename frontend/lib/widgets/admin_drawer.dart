@@ -235,7 +235,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const NotificacionesAdmin(),
+                  builder: (_) => const NotificacionesAdminScreen(),
                 ),
               );
               _obtenerNotificacionesPendientes();
