@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/notificaciones_admin.dart';
 import 'package:frontend/screens/notificaciones_cliente.dart';
 import 'package:frontend/services/api_config.dart';
 
@@ -282,7 +283,9 @@ class _NotificacionItemCardState extends State<NotificacionItemCard> {
 // CAMPANA DE NOTIFICACIONES CON BADGE DINÁMICO
 // ==========================
 class NotificationBadgeIcon extends StatefulWidget {
-  const NotificationBadgeIcon({super.key});
+  final bool esAdmin; // Parámetro para saber si debe abrir la vista de administrador
+
+  const NotificationBadgeIcon({super.key, this.esAdmin = false});
 
   @override
   State<NotificationBadgeIcon> createState() => _NotificationBadgeIconState();
@@ -340,9 +343,14 @@ class _NotificationBadgeIconState extends State<NotificationBadgeIcon> {
         IconButton(
           icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
           onPressed: () async {
+            // Navega a NotificacionesAdmin si esAdmin es true, de lo contrario a NotificacionesScreen (cliente)
             await Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+              MaterialPageRoute(
+                builder: (_) => widget.esAdmin 
+                    ? const NotificacionesAdmin() 
+                    : const NotificacionesScreen(),
+              ),
             );
             _obtenerNotificacionesNoLeidas();
           },

@@ -174,11 +174,18 @@ export const crear = async (req, res) => {
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // Notificación Admin (Novedad de pedido)
-        const { data: adminUsers } = await supabase
+        // =========================================================================
+        // BÚSQUEDA ROBUSTA DE ADMINISTRADORES
+        // =========================================================================
+        const { data: todosLosUsuarios, error: errorUsuarios } = await supabase
             .from("usuarios")
-            .select("id_usuario")
-            .or("rol.eq.ADMIN,rol.eq.admin");
+            .select("id_usuario, rol");
+
+        const adminUsers = todosLosUsuarios?.filter(u => {
+            if (!u.rol) return false;
+            const rolLower = u.rol.toLowerCase().trim();
+            return rolLower === 'admin' || rolLower === 'administrador';
+        }) || [];
 
         const mensajeAdmin = `Nuevo Pedido #${nuevoPedido.id_pedido}\nCliente: ${req.usuario.nombre}\nMétodo: ${metodo_pago || 'Nequi'}\nCompra: ${resumenProductos.join(', ')}\nTotal: $${total}`;
 
@@ -194,7 +201,7 @@ export const crear = async (req, res) => {
             }
         }
 
-        // Notificación Cliente (Registro no leído)
+        // Notificación al Cliente (Registro inicial)
         const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} (${resumenProductos.join(', ')}) fue realizado con éxito y está en revisión.`;
         await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
