@@ -5,7 +5,7 @@ import {
     listarTodos,
     obtenerPedido,
     cambiarEstado,
-    cambiarEstadoYNotificar // <--- 1. Importamos la nueva función
+    cambiarEstadoYNotificar
 } from "../controllers/pedido-controller.js";
 import { verificarToken } from "../middlewares/auth-middleware.js";
 import { verificarRol } from "../middlewares/rol-middleware.js";
@@ -22,7 +22,7 @@ router.post(
 );
 
 // ==========================
-// MIS PEDIDOS
+// MIS PEDIDOS (CLIENTE)
 // ==========================
 router.get(
     "/mis-pedidos",
@@ -31,10 +31,10 @@ router.get(
 );
 
 // ==========================
-// TODOS LOS PEDIDOS (SOLO ADMIN)
+// TODOS LOS PEDIDOS (SOLO ADMIN) -> Ruta corregida a /todos para evitar conflictos
 // ==========================
 router.get(
-    "/",
+    "/todos",
     verificarToken,
     verificarRol("ADMIN"),
     listarTodos

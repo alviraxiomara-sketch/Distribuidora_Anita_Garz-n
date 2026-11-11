@@ -88,17 +88,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     print('DEBUG - Botón "Realizar Pedido" presionado');
 
     if (!_formKey.currentState!.validate()) {
-      print('DEBUG - Error: El formulario tiene campos obligatorios vacíos o inválidos.');
+      _mostrarAlerta(
+        "Formulario incompleto",
+        "Por favor completa todos los campos obligatorios de entrega.",
+      );
       return;
     }
 
     if (_metodoPago == null) {
-      print('DEBUG - Error: No se seleccionó método de pago.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor seleccione un método de pago'),
-          backgroundColor: Colors.red,
-        ),
+      _mostrarAlerta(
+        "Método de pago requerido",
+        "Por favor seleccione un método de pago antes de continuar.",
       );
       return;
     }
@@ -106,12 +106,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final esNequi = _metodoPago!.toLowerCase() == 'nequi';
 
     if (esNequi && _comprobanteImagen == null && _comprobanteBytes == null) {
-      print('DEBUG - Error: Falta adjuntar comprobante de Nequi.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor adjunta el comprobante de pago de Nequi'),
-          backgroundColor: Colors.red,
-        ),
+      _mostrarAlerta(
+        "Comprobante faltante",
+        "Has seleccionado Nequi. Por favor adjunta el comprobante de pago.",
       );
       return;
     }
@@ -123,32 +120,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final token = prefs.getString('token');
 
       if (token == null || token.isEmpty) {
-        throw Exception('No has iniciado sesión');
+        throw Exception('No has iniciado sesión o el token ha expirado.');
       }
 
       String? comprobanteBase64;
 
       if (esNequi) {
         if (kIsWeb && _comprobanteBytes != null) {
-          comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(_comprobanteBytes!)}';
+          comprobanteBase64 =
+              'data:image/jpeg;base64,${base64Encode(_comprobanteBytes!)}';
         } else if (_comprobanteImagen != null) {
           final bytes = await _comprobanteImagen!.readAsBytes();
           comprobanteBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
         }
       }
 
-      print('DEBUG - Método de Pago: $_metodoPago');
-      print('DEBUG - ¿Se generó Base64 del comprobante?: ${comprobanteBase64 != null}');
-
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
       print('DEBUG - Enviando petición POST a: $url');
-      
+
       final response = await http.post(
         url,
-        headers: {
-          ...ApiConfig.headers,
-          'Authorization': 'Bearer $token',
-        },
+        headers: {...ApiConfig.headers, 'Authorization': 'Bearer $token'},
         body: jsonEncode({
           'nombre_cliente': _nombreController.text,
           'direccion_entrega': _direccionController.text,
@@ -161,14 +153,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print('DEBUG - Código de respuesta HTTP: ${response.statusCode}');
       print('DEBUG - Cuerpo de respuesta HTTP: ${response.body}');
 
-      final responseData = jsonDecode(response.body);
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('¡Pedido realizado con éxito y notificado al administrador!'),
+            content: Text(
+              '¡Pedido realizado con éxito y notificado al administrador!',
+            ),
             backgroundColor: Color(0xFF00A2E8),
           ),
         );
@@ -179,20 +171,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           (route) => false,
         );
       } else {
-        throw Exception(responseData['error'] ?? 'Error al procesar el pedido');
+        final responseData = jsonDecode(response.body);
+        throw Exception(
+          responseData['error'] ??
+              'Error al procesar el pedido (${response.statusCode})',
+        );
       }
     } catch (e) {
       print('DEBUG - Excepción atrapada en _realizarPedido: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _mostrarAlerta("Error al procesar", "$e");
     } finally {
       if (mounted) setState(() => _procesando = false);
     }
+  }
+
+  void _mostrarAlerta(String titulo, String mensaje) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF063B5D),
+        title: Text(titulo, style: const TextStyle(color: Colors.white)),
+        content: Text(mensaje, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Aceptar',
+              style: TextStyle(color: Color(0xFF00A8FF)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -211,28 +222,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               MaterialPageRoute(builder: (_) => const PrincipalClienteScreen()),
               (route) => false,
             ),
-            icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
+            icon: const Icon(
+              Icons.home_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
-            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 24),
+            icon: const Icon(
+              Icons.account_circle_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const NotificacionesCliente()),
             ),
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
+            icon: const Icon(
+              Icons.notifications_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const CartScreen()),
             ),
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 24),
+            icon: const Icon(
+              Icons.shopping_cart_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 4),
         ],
@@ -275,31 +302,64 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF063B5D),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF00A2E8), width: 1),
+                      border: Border.all(
+                        color: const Color(0xFF00A2E8),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: imagenUrl.isNotEmpty
-                              ? Image.network(imagenUrl, width: 50, height: 50, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.local_drink, color: Colors.white, size: 30))
-                              : const Icon(Icons.local_drink, color: Colors.white, size: 30),
+                              ? Image.network(
+                                  imagenUrl,
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.local_drink,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.local_drink,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(nombre.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(
+                                nombre.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
                               const SizedBox(height: 2),
-                              Text('$presentacion', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                              Text(
+                                '$presentacion',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         Text(
                           '\$$subtotal',
-                          style: const TextStyle(color: Color(0xFF00A8FF), fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(
+                            color: Color(0xFF00A8FF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -309,11 +369,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF063B5D),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF00A2E8), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFF00A2E8),
+                    width: 1.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -371,11 +437,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00A8FF),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _procesando
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Realizar Pedido', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    : const Text(
+                        'Realizar Pedido',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ],
           ),
