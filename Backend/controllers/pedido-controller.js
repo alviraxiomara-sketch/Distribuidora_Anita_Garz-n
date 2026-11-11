@@ -174,9 +174,7 @@ export const crear = async (req, res) => {
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // =========================================================================
-        // BÚSQUEDA ROBUSTA DE ADMINISTRADORES
-        // =========================================================================
+        // Búsqueda robusta de administradores para notificaciones
         const { data: todosLosUsuarios, error: errorUsuarios } = await supabase
             .from("usuarios")
             .select("id_usuario, rol, role");
@@ -194,7 +192,7 @@ export const crear = async (req, res) => {
             for (const admin of adminUsers) {
                 await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
-                    id_pedido: nuevoPedido.id_pedido, // <--- ID del pedido adjunto para el Admin
+                    id_pedido: nuevoPedido.id_pedido,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeAdmin,
                     comprobante: urlComprobanteFinal,
@@ -203,11 +201,11 @@ export const crear = async (req, res) => {
             }
         }
 
-        // Notificación al Cliente (Registro inicial con su id_pedido)
+        // Notificación inicial al Cliente con su id_pedido asignado
         const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} (${resumenProductos.join(', ')}) fue realizado con éxito y está en revisión.`;
         await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
-            id_pedido: nuevoPedido.id_pedido, // <--- ID del pedido adjunto para el Cliente
+            id_pedido: nuevoPedido.id_pedido,
             titulo: "¡Pedido Realizado con Éxito!",
             mensaje: mensajeCliente,
             leida: false
@@ -321,7 +319,7 @@ export const cambiarEstadoYNotificar = async (req, res) => {
 
         await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
-            id_pedido: Number(id), // <--- Incluido también al aprobar/rechazar
+            id_pedido: Number(id),
             titulo: tituloNoti,
             mensaje: mensajeNoti,
             leida: false
