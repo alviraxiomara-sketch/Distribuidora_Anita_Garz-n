@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:flutter/material.dart'; // <--- Importamos el archivo de notificaciones que contiene el NotificationBadgeIcon
+import 'package:flutter/material.dart';
+import 'package:frontend/screens/notificaciones_cliente.dart';
 import 'package:frontend/widgets/home_footer_contacts.dart';
-import 'package:frontend/widgets/notification_badge_icon.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/cart_screen.dart';
@@ -66,10 +66,17 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // Conectamos el widget de la campana con el número dinámico de no leídas
-          const NotificationBadgeIcon(
-            cantidadNoLeidas: 0,
-            rolUsuario: 'cliente',
+          // Botón de campana directo para abrir las notificaciones del cliente
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificacionesCliente()),
+            ),
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.push(

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/ingresar_producto.dart';
-import 'package:frontend/screens/inventario.dart'; // <--- 1. Asegúrate de importar la pantalla de Inventario
+import 'package:frontend/screens/inventario.dart';
 import 'package:frontend/screens/notificaciones_admin.dart';
 import 'package:frontend/screens/stock.dart';
 import 'package:frontend/services/api_config.dart';
@@ -173,14 +173,14 @@ class _AdminDrawerState extends State<AdminDrawer> {
             ),
           ),
 
-          // 2. Opción Inventario conectada a InventarioScreen
+          // Opción Inventario
           _buildAdminOption(
             context: context,
             icon: Icons.inventory_2_outlined,
             title: 'Inventario',
             subtitle: 'Catálogo de productos',
             onTap: () {
-              Navigator.pop(context); // Cierra el Drawer
+              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -190,7 +190,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
             },
           ),
 
-          // Opción Control de Stock conectada a ControlStockScreen
+          // Opción Control de Stock
           _buildAdminOption(
             context: context,
             icon: Icons.numbers_rounded,
@@ -207,6 +207,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
             },
           ),
 
+          // Opción Agregar Producto
           _buildAdminOption(
             context: context,
             icon: Icons.add_circle_outline_rounded,
@@ -223,7 +224,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
             },
           ),
 
-          // Opción Notificaciones con badge dinámico
+          // Opción Notificaciones con badge dinámico (apuntando a NotificacionesAdmin)
           _buildAdminOption(
             context: context,
             icon: Icons.notifications_none_rounded,
@@ -235,7 +236,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const NotificacionesAdminScreen(),
+                  builder: (_) => const NotificacionesAdmin(),
                 ),
               );
               _obtenerNotificacionesPendientes();

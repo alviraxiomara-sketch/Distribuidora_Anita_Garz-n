@@ -179,11 +179,12 @@ export const crear = async (req, res) => {
         // =========================================================================
         const { data: todosLosUsuarios, error: errorUsuarios } = await supabase
             .from("usuarios")
-            .select("id_usuario, rol");
+            .select("id_usuario, rol, role");
 
         const adminUsers = todosLosUsuarios?.filter(u => {
-            if (!u.rol) return false;
-            const rolLower = u.rol.toLowerCase().trim();
+            const rolUser = u.rol || u.role;
+            if (!rolUser) return false;
+            const rolLower = rolUser.toLowerCase().trim();
             return rolLower === 'admin' || rolLower === 'administrador';
         }) || [];
 
@@ -193,6 +194,7 @@ export const crear = async (req, res) => {
             for (const admin of adminUsers) {
                 await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
+                    id_pedido: nuevoPedido.id_pedido, // <--- ID del pedido adjunto para el Admin
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeAdmin,
                     comprobante: urlComprobanteFinal,
@@ -201,10 +203,11 @@ export const crear = async (req, res) => {
             }
         }
 
-        // Notificación al Cliente (Registro inicial)
+        // Notificación al Cliente (Registro inicial con su id_pedido)
         const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} (${resumenProductos.join(', ')}) fue realizado con éxito y está en revisión.`;
         await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
+            id_pedido: nuevoPedido.id_pedido, // <--- ID del pedido adjunto para el Cliente
             titulo: "¡Pedido Realizado con Éxito!",
             mensaje: mensajeCliente,
             leida: false
@@ -318,6 +321,7 @@ export const cambiarEstadoYNotificar = async (req, res) => {
 
         await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
+            id_pedido: Number(id), // <--- Incluido también al aprobar/rechazar
             titulo: tituloNoti,
             mensaje: mensajeNoti,
             leida: false

@@ -223,7 +223,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           IconButton(
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => NotificacionesScreen()),
+              MaterialPageRoute(builder: (_) => const NotificacionesCliente()),
             ),
             icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
           ),
