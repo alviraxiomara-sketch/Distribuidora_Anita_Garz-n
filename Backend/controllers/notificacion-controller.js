@@ -1,94 +1,67 @@
-import {obtenerNotificacionesUsuario, obtenerNotificacionPorId, marcarLeida, eliminarNotificacion} from "../models/notificacion-model.js";
+import { supabase } from "../config/supabase.js";
+import { obtenerNotificacionPorId, marcarLeida, eliminarNotificacion as modeloEliminar } from "../models/notificacion-model.js";
 
 
 // ==========================
-// LISTAR MIS NOTIFICACIONES
+// LISTAR MIS NOTIFICACIONES (Corregido con filtro directo)
 // ==========================
-
-export const listarMisNotificaciones =
-async (req, res) => {
-
+export const listarMisNotificaciones = async (req, res) => {
     try {
+        const id_usuario = req.usuario.id_usuario;
 
-        const id_usuario =
-            req.usuario.id_usuario;
-
-        const { data, error } =
-            await obtenerNotificacionesUsuario(
-                id_usuario
-            );
+        // Consulta directa a Supabase filtrando estrictamente por el usuario autenticado
+        const { data, error } = await supabase
+            .from("notificaciones")
+            .select("*")
+            .eq("id_usuario", id_usuario)
+            .order("created_at", { ascending: false });
 
         if (error) {
-
             return res.status(500).json({
                 error: error.message
             });
-
         }
 
         return res.status(200).json(data);
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
-
 };
 
 
 // ==========================
 // MARCAR COMO LEÍDA
 // ==========================
-
-export const marcarComoLeida =
-async (req, res) => {
-
+export const marcarComoLeida = async (req, res) => {
     try {
-
-        const { id } =
-            req.params;
+        const { id } = req.params;
 
         const {
             data: notificacion,
             error
-        } =
-        await obtenerNotificacionPorId(
-            id
-        );
+        } = await obtenerNotificacionPorId(id);
 
         if (error) {
-
             return res.status(500).json({
                 error: error.message
             });
-
         }
 
         if (!notificacion) {
-
             return res.status(404).json({
                 error: "Notificación no encontrada"
             });
-
         }
 
         if (
-            Number(
-                notificacion.id_usuario
-            )
-            !==
-            Number(
-                req.usuario.id_usuario
-            )
+            Number(notificacion.id_usuario) !== Number(req.usuario.id_usuario)
         ) {
-
             return res.status(403).json({
                 error: "No tiene permiso"
             });
-
         }
 
         const {
@@ -97,109 +70,75 @@ async (req, res) => {
         } = await marcarLeida(id);
 
         if (errorUpdate) {
-
             return res.status(500).json({
                 error: errorUpdate.message
             });
-
         }
 
         return res.status(200).json({
-
             mensaje: "Notificación marcada como leída",
             notificacion: data
-
         });
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
-
 };
 
 
 // ==========================
-// ELIMINAR NOTIFICACIÓN (Corregido con Number)
+// ELIMINAR NOTIFICACIÓN
 // ==========================
-
-export const eliminar =
-async (req, res) => {
-
+export const eliminar = async (req, res) => {
     try {
-
-        const { id } =
-            req.params;
+        const { id } = req.params;
 
         const {
             data: notificacion,
             error
-        } =
-        await obtenerNotificacionPorId(
-            id
-        );
+        } = await obtenerNotificacionPorId(id);
 
         if (error) {
-
             return res.status(500).json({
                 error: error.message
             });
-
         }
 
         if (!notificacion) {
-
             return res.status(404).json({
                 error: "Notificación no encontrada"
             });
-
         }
 
         if (
-            Number(
-                notificacion.id_usuario
-            )
-            !==
-            Number(
-                req.usuario.id_usuario
-            )
+            Number(notificacion.id_usuario) !== Number(req.usuario.id_usuario)
         ) {
-
             return res.status(403).json({
                 error: "No tiene permiso"
             });
-
         }
 
         const {
             data,
             error: errorDelete
-        } = await eliminarNotificacion(Number(id));
+        } = await modeloEliminar(Number(id));
 
         if (errorDelete) {
-
             return res.status(500).json({
                 error: errorDelete.message
             });
-
         }
 
         return res.status(200).json({
-
             mensaje: "Notificación eliminada correctamente",
             notificacion: data
-
         });
 
     } catch (error) {
-
         return res.status(500).json({
             error: error.message
         });
-
     }
-
 };

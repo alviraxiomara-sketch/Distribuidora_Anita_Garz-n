@@ -20,11 +20,20 @@ class PrincipalClienteScreen extends StatefulWidget {
 
 class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
   List<dynamic> _categoriasList = [];
+  int _noLeidasCount = 0; // <--- Variable para almacenar el número de notificaciones no leídas
 
   @override
   void initState() {
     super.initState();
     _cargarCategorias();
+    _contarNotificacionesNoLeidas();
+  }
+
+  // Método para actualizar las notificaciones al volver de la pantalla de notificaciones
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _contarNotificacionesNoLeidas();
   }
 
   Future<void> _cargarCategorias() async {
@@ -48,6 +57,41 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
     } catch (_) {}
   }
 
+  // Consultar cuántas notificaciones no leídas tiene el cliente
+  Future<void> _contarNotificacionesNoLeidas() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        List<dynamic> lista = [];
+        if (decoded is List) {
+          lista = decoded;
+        } else if (decoded is Map) {
+          lista = decoded['data'] ?? decoded['notificaciones'] ?? [];
+        }
+
+        // Filtramos las que tengan leida == false (o leida == 0 / null)
+        int noLeidas = lista.where((item) {
+          final leida = item['leida'] ?? item['leido'] ?? false;
+          return leida == false || leida == 0;
+        }).length;
+
+        setState(() {
+          _noLeidasCount = noLeidas;
+        });
+      }
+    } catch (_) {}
+  }
+
   void _abrirChat(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -66,17 +110,52 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // Botón de campana directo para abrir las notificaciones del cliente
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NotificacionesCliente()),
-            ),
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
+          // Botón de campana con indicador dinámico (Badge)
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                onPressed: () async {
+                  // Al presionar, navegamos a NotificacionesCliente
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificacionesCliente()),
+                  );
+                  // Al regresar, recalculamos las no leídas para que el número desaparezca/se actualice
+                  _contarNotificacionesNoLeidas();
+                },
+                icon: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+              if (_noLeidasCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.redAccent,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      '$_noLeidasCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           IconButton(
             onPressed: () => Navigator.push(
