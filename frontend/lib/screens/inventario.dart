@@ -30,6 +30,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   bool _isLoading = true;
   int? _categoriaSel;
   bool _soloBajo = false;
+  bool _soloAgotados = false;
 
   @override
   void initState() {
@@ -149,6 +150,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   int _stockActual(dynamic item) => _aInt(item['stock_actual'] ?? item['cantidad']);
   int _stockMinimo(dynamic item) => _aInt(item['stock_minimo'] ?? 20);
   bool _esStockBajo(dynamic item) => _stockActual(item) < _stockMinimo(item);
+  bool _esAgotado(dynamic item) => _stockActual(item) <= 0;
 
   int? _idCategoria(dynamic item) {
     final p = item['productos'] ?? item;
@@ -185,7 +187,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
       final nombre = (p['nombre'] ?? item['nombre'] ?? '').toString().toLowerCase();
       if (!nombre.contains(query)) return false;
       if (_categoriaSel != null && _idCategoria(item) != _categoriaSel) return false;
-      if (_soloBajo && !_esStockBajo(item)) return false;
+      // "Stock bajo" no incluye los agotados (igual que el resumen de arriba)
+      if (_soloBajo && !(_stockActual(item) > 0 && _esStockBajo(item))) return false;
+      if (_soloAgotados && !_esAgotado(item)) return false;
       return true;
     }).toList();
 
@@ -299,15 +303,22 @@ class _InventarioScreenState extends State<InventarioScreen> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _chipFiltro('Todos', _categoriaSel == null && !_soloBajo, () {
+          _chipFiltro('Todos', _categoriaSel == null && !_soloBajo && !_soloAgotados, () {
             _categoriaSel = null;
             _soloBajo = false;
+            _soloAgotados = false;
             _filtrarInventario();
           }),
           _chipFiltro('Stock bajo', _soloBajo, () {
             _soloBajo = !_soloBajo;
+            _soloAgotados = false;
             _filtrarInventario();
           }, color: const Color(0xFFFFA726)),
+          _chipFiltro('Agotados', _soloAgotados, () {
+            _soloAgotados = !_soloAgotados;
+            _soloBajo = false;
+            _filtrarInventario();
+          }, color: Colors.redAccent),
           for (final c in _categoriasList)
             () {
               final id = int.tryParse((c['id_categoria'] ?? c['id'] ?? '').toString());
