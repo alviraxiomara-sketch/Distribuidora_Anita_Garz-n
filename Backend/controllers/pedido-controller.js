@@ -178,7 +178,7 @@ export const crear = async (req, res) => {
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // Búsqueda de administradores para notificaciones
+        // Búsqueda flexible de administradores (soporta 'ADMIN', 'admin', etc.)
         const { data: todosLosUsuarios, error: errorUsuarios } = await supabase
             .from("usuarios")
             .select("id_usuario, rol, role");
@@ -190,8 +190,8 @@ export const crear = async (req, res) => {
         const adminUsers = todosLosUsuarios?.filter(u => {
             const rolUser = u.rol || u.role;
             if (!rolUser) return false;
-            const rolLower = rolUser.toLowerCase().trim();
-            return rolLower === 'admin' || rolLower === 'administrador';
+            const rolLower = rolUser.toString().toLowerCase().trim();
+            return rolLower.includes('admin');
         }) || [];
 
         const clienteNombreFinal = nombre_cliente || req.usuario.nombre || 'Cliente';
@@ -212,9 +212,11 @@ export const crear = async (req, res) => {
                     console.error("❌ Error insertando notificación admin:", errorNotiAdmin);
                 }
             }
+        } else {
+            console.warn("⚠️ No se encontraron usuarios administradores para notificar.");
         }
 
-        // 2. Notificación AL CLIENTE (DETALLADA con sus productos, pero SIN comprobante en la notificación)
+        // 2. Notificación AL CLIENTE (DETALLADA con sus productos, pero SIN comprobante)
         const mensajeCliente = `¡Tu pedido #${nuevoPedido.id_pedido} fue realizado con éxito!\n\nProductos:\n• ${resumenProductos.join('\n• ')}\nMétodo de pago: ${metodo_pago || 'Nequi'}\nTotal pagado: $${total}\n\nTu pedido está en revisión.`;
         
         const { error: errorNotiCliente } = await supabase.from("notificaciones").insert([{
