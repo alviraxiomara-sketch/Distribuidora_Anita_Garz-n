@@ -70,6 +70,24 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     }
   }
 
+  // Guarda en la BD si la notificación fue APROBADA o RECHAZADA
+  Future<void> _guardarEstadoAccion(dynamic idNotificacion, String estado) async {
+    if (idNotificacion == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones/$idNotificacion/estado-accion'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'estado': estado}),
+      );
+    } catch (_) {}
+  }
+
   void _mostrarComprobanteAmpliado(BuildContext context, String url) {
     showDialog(
       context: context,
@@ -119,12 +137,14 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     }
 
     if (pedidoId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo identificar el ID del pedido'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo identificar el ID del pedido'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return false;
     }
 
@@ -142,6 +162,10 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
       );
 
       if (res.statusCode == 200 && mounted) {
+        // Guarda en la BD para que los botones no vuelvan a aparecer
+        await _guardarEstadoAccion(notificacion['id_notificacion'], nuevoEstado);
+        notificacion['estado_accion'] = nuevoEstado;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

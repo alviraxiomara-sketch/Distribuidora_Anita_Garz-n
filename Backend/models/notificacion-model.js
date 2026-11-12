@@ -79,3 +79,16 @@ export const eliminarNotificacion = async (id_notificacion) => {
 
     return { data, error };
 };
+// ==========================
+// GUARDAR ESTADO DE LA ACCIÓN (APROBADO / RECHAZADO)
+// ==========================
+export const guardarEstadoAccion = async (id_notificacion, estado_accion) => {
+    const { data, error } = await supabase
+        .from("notificaciones")
+        .update({ estado_accion })
+        .eq("id_notificacion", Number(id_notificacion))
+        .select()
+        .single();
+
+    return { data, error };
+};

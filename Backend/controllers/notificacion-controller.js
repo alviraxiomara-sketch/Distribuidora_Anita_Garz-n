@@ -3,9 +3,9 @@ import {
     obtenerNotificacionPorId,
     marcarLeida,
     marcarTodasLeidas,
+    guardarEstadoAccion,
     eliminarNotificacion as modeloEliminar
 } from "../models/notificacion-model.js";
-
 
 // ==========================
 // LISTAR MIS NOTIFICACIONES
@@ -123,6 +123,47 @@ export const eliminar = async (req, res) => {
 
         return res.status(200).json({
             mensaje: "Notificación eliminada correctamente",
+            notificacion: data
+        });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+// ==========================
+// GUARDAR ESTADO DE ACCIÓN
+// ==========================
+export const guardarEstado = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { estado } = req.body;
+
+        if (!["APROBADO", "RECHAZADO"].includes(estado)) {
+            return res.status(400).json({ error: "Estado no válido" });
+        }
+
+        const { data: notificacion, error } = await obtenerNotificacionPorId(id);
+
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+
+        if (!notificacion) {
+            return res.status(404).json({ error: "Notificación no encontrada" });
+        }
+
+        if (Number(notificacion.id_usuario) !== Number(req.usuario.id_usuario)) {
+            return res.status(403).json({ error: "No tiene permiso" });
+        }
+
+        const { data, error: errorUpdate } = await guardarEstadoAccion(id, estado);
+
+        if (errorUpdate) {
+            return res.status(500).json({ error: errorUpdate.message });
+        }
+
+        return res.status(200).json({
+            mensaje: "Estado guardado",
             notificacion: data
         });
 

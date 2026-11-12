@@ -3,6 +3,7 @@ import {
     listarMisNotificaciones,
     marcarComoLeida,
     marcarTodasComoLeidas,
+    guardarEstado,
     eliminar
 } from "../controllers/notificacion-controller.js";
 import { verificarToken } from "../middlewares/auth-middleware.js";
@@ -28,5 +29,10 @@ router.put("/:id/leida", verificarToken, marcarComoLeida);
 // ELIMINAR NOTIFICACIÓN
 // ==========================
 router.delete("/:id/eliminar", verificarToken, eliminar);
+
+// ==========================
+// GUARDAR ESTADO DE ACCIÓN
+// ==========================
+router.put("/:id/estado-accion", verificarToken, guardarEstado);
 
 export default router;
