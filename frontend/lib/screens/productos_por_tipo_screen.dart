@@ -8,6 +8,7 @@ import 'package:frontend/screens/home.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/screens/cart_screen.dart'; // 👈 Importamos la pantalla del carrito
 import 'package:frontend/services/api_config.dart';
+import 'package:frontend/services/carrito_helper.dart';
 import 'package:frontend/widgets/app_drawer.dart';
 import 'package:frontend/widgets/producto_card.dart';
 
@@ -119,75 +120,10 @@ class _ProductosPorTipoScreenState extends State<ProductosPorTipoScreen> {
     }
   }
 
-  // 🛒 Manejo de sesión y guardado en el carrito de compras
+  // 🛒 Agrega al carrito usando el servicio (maneja sesión y mensajes)
   Future<void> _manejarAgregarCarrito(Map<String, dynamic> producto, int cantidad) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (!mounted) return;
-
-    // Si no ha iniciado sesión, redirigir al Login
-    if (token == null || token.isEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-      return;
-    }
-
-    try {
-      final idProducto = producto['id_producto'] ?? producto['id'];
-
-      final res = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/carrito'),
-        headers: {
-          ...ApiConfig.headers,
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'id_producto': idProducto,
-          'cantidad': cantidad,
-        }),
-      );
-
-      if (!mounted) return;
-
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Producto agregado al carrito'),
-            backgroundColor: Color(0xFF063B5D),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else {
-        String mensajeBackend = 'Error (${res.statusCode})';
-        try {
-          final decoded = jsonDecode(res.body);
-          mensajeBackend = decoded['mensaje'] ?? decoded['error'] ?? res.body;
-        } catch (_) {
-          mensajeBackend = res.body.isNotEmpty ? res.body : 'Error del servidor';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(mensajeBackend),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error de conexión: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+    final idProducto = producto['id_producto'] ?? producto['id'];
+    await manejarAgregarAlCarrito(context, idProducto, cantidad);
   }
 
   Future<void> _verificarSesionYRedirigirHome(BuildContext context) async {

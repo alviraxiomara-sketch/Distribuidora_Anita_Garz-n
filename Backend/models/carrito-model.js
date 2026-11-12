@@ -3,6 +3,8 @@ import { supabase } from "../config/supabase.js";
 // ==========================
 // OBTENER CARRITO DEL USUARIO
 // ==========================
+// Usa "*" para no fallar si alguna columna no existe.
+// Si por error hay más de un carrito del usuario, toma el más antiguo.
 
 export const obtenerCarritoPorUsuario = async (id_usuario) => {
 
@@ -10,29 +12,15 @@ export const obtenerCarritoPorUsuario = async (id_usuario) => {
         await supabase
             .from("carrito")
             .select(`
-                id_carrito,
-                id_usuario,
-                fecha_creacion,
-                updated_at,
+                *,
                 detalle_carrito (
-                    id_detalle_carrito,
-                    id_producto,
-                    cantidad,
-                    precio_unitario,
-                    subtotal,
-                    created_at,
-                    productos (
-                        id_producto,
-                        nombre,
-                        presentacion,
-                        precio_detal,
-                        precio_mayorista,
-                        imagen_url,
-                        activo
-                    )
+                    *,
+                    productos (*)
                 )
             `)
             .eq("id_usuario", id_usuario)
+            .order("id_carrito", { ascending: true })
+            .limit(1)
             .maybeSingle();
 
     return { data, error };
@@ -66,26 +54,10 @@ export const obtenerCarritoPorId = async (id_carrito) => {
         await supabase
             .from("carrito")
             .select(`
-                id_carrito,
-                id_usuario,
-                fecha_creacion,
-                updated_at,
+                *,
                 detalle_carrito (
-                    id_detalle_carrito,
-                    id_producto,
-                    cantidad,
-                    precio_unitario,
-                    subtotal,
-                    created_at,
-                    productos (
-                        id_producto,
-                        nombre,
-                        presentacion,
-                        precio_detal,
-                        precio_mayorista,
-                        imagen_url,
-                        activo
-                    )
+                    *,
+                    productos (*)
                 )
             `)
             .eq("id_carrito", id_carrito)
@@ -99,9 +71,7 @@ export const obtenerCarritoPorId = async (id_carrito) => {
 // AGREGAR PRODUCTO AL CARRITO
 // ==========================
 
-export const agregarDetalleCarrito = async (
-    detalle
-) => {
+export const agregarDetalleCarrito = async (detalle) => {
 
     const { data, error } =
         await supabase
@@ -148,10 +118,7 @@ export const actualizarDetalleCarrito = async (
         await supabase
             .from("detalle_carrito")
             .update(datosActualizados)
-            .eq(
-                "id_detalle_carrito",
-                id_detalle_carrito
-            )
+            .eq("id_detalle_carrito", id_detalle_carrito)
             .select()
             .single();
 
@@ -163,18 +130,13 @@ export const actualizarDetalleCarrito = async (
 // ELIMINAR PRODUCTO DEL CARRITO
 // ==========================
 
-export const eliminarDetalleCarrito = async (
-    id_detalle_carrito
-) => {
+export const eliminarDetalleCarrito = async (id_detalle_carrito) => {
 
     const { data, error } =
         await supabase
             .from("detalle_carrito")
             .delete()
-            .eq(
-                "id_detalle_carrito",
-                id_detalle_carrito
-            )
+            .eq("id_detalle_carrito", id_detalle_carrito)
             .select()
             .single();
 
