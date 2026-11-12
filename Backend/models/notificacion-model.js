@@ -54,6 +54,20 @@ export const marcarLeida = async (id_notificacion) => {
 };
 
 // ==========================
+// MARCAR TODAS COMO LEÍDAS (de un usuario)
+// ==========================
+export const marcarTodasLeidas = async (id_usuario) => {
+    const { data, error } = await supabase
+        .from("notificaciones")
+        .update({ leida: true })
+        .eq("id_usuario", id_usuario)
+        .eq("leida", false)
+        .select();
+
+    return { data, error };
+};
+
+// ==========================
 // ELIMINAR NOTIFICACIÓN
 // ==========================
 export const eliminarNotificacion = async (id_notificacion) => {

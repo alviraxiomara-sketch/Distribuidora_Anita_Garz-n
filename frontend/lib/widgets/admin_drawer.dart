@@ -232,13 +232,21 @@ class _AdminDrawerState extends State<AdminDrawer> {
             subtitle: 'Alertas de pedidos y stock',
             badgeCount: _notificacionesPendientes > 0 ? _notificacionesPendientes : null,
             onTap: () async {
-              Navigator.pop(context);
+              Navigator.pop(context); // Cierra el menú lateral (Drawer)
+              
+              // Navega a la pantalla de gestión de pedidos
               await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => const NotificacionesAdmin(),
                 ),
               );
+
+              // 👇 Actualiza el estado al regresar para limpiar el badge rojo al instante
+              setState(() {
+                _notificacionesPendientes = 0;
+              });
+              
               _obtenerNotificacionesPendientes();
             },
           ),

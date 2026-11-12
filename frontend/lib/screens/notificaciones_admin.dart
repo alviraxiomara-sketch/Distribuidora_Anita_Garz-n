@@ -41,11 +41,32 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
           _notificaciones = decoded is List ? decoded : (decoded['data'] ?? []);
           _isLoading = false;
         });
-      } else {
+
+        // Marca todas como leídas en la BD al entrar a la pantalla
+        await _marcarTodasComoLeidas();
+      } else if (mounted) {
         setState(() => _isLoading = false);
       }
     } catch (_) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Marca como leídas todas las notificaciones del usuario en la BD
+  Future<void> _marcarTodasComoLeidas() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/notificaciones/marcar-todas-leidas'),
+        headers: {
+          ...ApiConfig.headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+    } catch (_) {
+      // Silencioso: si falla, el badge volverá a aparecer
     }
   }
 
@@ -62,7 +83,10 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
               child: Image.network(
                 url,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Text('No se pudo cargar la imagen', style: TextStyle(color: Colors.white)),
+                errorBuilder: (_, __, ___) => const Text(
+                  'No se pudo cargar la imagen',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ),
             Positioned(
@@ -79,14 +103,16 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
     );
   }
 
-  Future<bool> _cambiarEstadoPedido(Map<String, dynamic> notificacion, String nuevoEstado) async {
+  Future<bool> _cambiarEstadoPedido(
+      Map<String, dynamic> notificacion, String nuevoEstado) async {
     int? pedidoId = notificacion['id_pedido'] != null
         ? int.tryParse(notificacion['id_pedido'].toString())
         : null;
 
     if (pedidoId == null) {
       try {
-        final textoCompleto = '${notificacion['titulo'] ?? ''} ${notificacion['mensaje'] ?? ''}';
+        final textoCompleto =
+            '${notificacion['titulo'] ?? ''} ${notificacion['mensaje'] ?? ''}';
         final match = RegExp(r'#(\d+)').firstMatch(textoCompleto);
         if (match != null) pedidoId = int.parse(match.group(1)!);
       } catch (_) {}
@@ -94,7 +120,10 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
 
     if (pedidoId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo identificar el ID del pedido'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('No se pudo identificar el ID del pedido'),
+          backgroundColor: Colors.red,
+        ),
       );
       return false;
     }
@@ -115,8 +144,10 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
       if (res.statusCode == 200 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pedido #$pedidoId ${nuevoEstado.toLowerCase()} exitosamente y cliente notificado'),
-            backgroundColor: nuevoEstado == 'APROBADO' ? Colors.green : Colors.red,
+            content: Text(
+                'Pedido #$pedidoId ${nuevoEstado.toLowerCase()} exitosamente y cliente notificado'),
+            backgroundColor:
+                nuevoEstado == 'APROBADO' ? Colors.green : Colors.red,
           ),
         );
         return true;
@@ -155,7 +186,10 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
       backgroundColor: const Color(0xFF031A2E),
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
-        title: const Text('Gestión de Pedidos (Admin)', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: const Text(
+          'Gestión de Pedidos (Admin)',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -169,22 +203,29 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
             border: Border.all(color: const Color(0xFF00A8FF), width: 2),
           ),
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
               : _notificaciones.isEmpty
                   ? const Center(
-                      child: Text('No hay notificaciones de pedidos', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                      child: Text(
+                        'No hay notificaciones de pedidos',
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
                     )
                   : ListView.builder(
                       itemCount: _notificaciones.length,
                       itemBuilder: (context, index) {
                         final noti = _notificaciones[index];
-                        final idNoti = noti['id_notificacion'] ?? noti['id'] ?? index;
+                        final idNoti =
+                            noti['id_notificacion'] ?? noti['id'] ?? index;
 
                         return TarjetaNotificacionAdmin(
                           notificacion: noti,
                           onEliminar: () => _eliminarNotificacion(idNoti, index),
-                          onVerComprobante: (url) => _mostrarComprobanteAmpliado(context, url),
-                          onCambiarEstado: (estado) => _cambiarEstadoPedido(noti, estado),
+                          onVerComprobante: (url) =>
+                              _mostrarComprobanteAmpliado(context, url),
+                          onCambiarEstado: (estado) =>
+                              _cambiarEstadoPedido(noti, estado),
                         );
                       },
                     ),
