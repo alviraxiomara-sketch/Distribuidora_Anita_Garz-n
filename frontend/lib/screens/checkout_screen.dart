@@ -87,6 +87,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _realizarPedido() async {
     print('🛑 [CHECKOUT] Entró a _realizarPedido');
 
+    // 1. Validar que los campos del formulario estén llenos
     if (!_formKey.currentState!.validate()) {
       print('❌ [CHECKOUT] El formulario falló la validación');
       _mostrarAlerta(
@@ -96,6 +97,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
+    // 2. Validar que se haya seleccionado un método de pago
     if (_metodoPago == null) {
       print('❌ [CHECKOUT] Falta seleccionar el método de pago');
       _mostrarAlerta(
@@ -107,6 +109,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final esNequi = _metodoPago!.toLowerCase() == 'nequi';
 
+    // 3. Validar el comprobante si el método es Nequi
     if (esNequi && _comprobanteImagen == null && _comprobanteBytes == null) {
       print('❌ [CHECKOUT] Falta comprobante de Nequi');
       _mostrarAlerta(
@@ -143,6 +146,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final url = Uri.parse('${ApiConfig.baseUrl}/pedidos');
       print('🚀 [CHECKOUT] Enviando petición POST a: $url');
 
+      // Envía la petición al backend; esto creará el pedido, el pago 
+      // y generará automáticamente las notificaciones para cliente y admin.
       final response = await http.post(
         url,
         headers: {...ApiConfig.headers, 'Authorization': 'Bearer $token'},

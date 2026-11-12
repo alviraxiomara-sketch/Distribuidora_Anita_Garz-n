@@ -195,7 +195,7 @@ export const crear = async (req, res) => {
                     id_pedido: nuevoPedido.id_pedido,
                     titulo: "Nuevo Pedido Recibido",
                     mensaje: mensajeAdmin,
-                    comprobante: urlComprobanteFinal,
+                    comprobantes: urlComprobanteFinal, // <--- CORREGIDO: ahora usa 'comprobantes' (con 's')
                     leida: false
                 }]);
             }
