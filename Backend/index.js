@@ -14,7 +14,8 @@ import pagoRoutes from "./routers/pago-router.js";
 import notificacionRoutes from "./routers/notificacion-router.js";
 import recuperarRoutes from "./routers/recuperar-router.js";
 import chatboxRouter from "./routers/chatbox-router.js";
-import tipoRouter from "./routers/tipo-router.js"; // <--- Importamos la nueva ruta de tipos
+import tipoRouter from "./routers/tipo-router.js";
+import ventasRoutes from "./routers/ventas-router.js"; // <--- Importamos la nueva ruta de tipos
 
 // cargamos las variables
 
@@ -40,7 +41,8 @@ app.use("/api/pagos", pagoRoutes);
 app.use("/api/notificaciones", notificacionRoutes);
 app.use("/api/recuperar", recuperarRoutes);
 app.use("/api/chatbox", chatboxRouter);
-app.use("/api/tipos", tipoRouter); // <--- Montamos la nueva ruta para que responda en /api/tipos
+app.use("/api/tipos", tipoRouter);
+app.use("/api/ventas", ventasRoutes);
 
 
 //montando la ruta de Api
