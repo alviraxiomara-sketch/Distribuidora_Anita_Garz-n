@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CheckoutFormFields extends StatelessWidget {
   final TextEditingController nombreController;
@@ -38,9 +39,18 @@ class CheckoutFormFields extends StatelessWidget {
         TextFormField(
           controller: telefonoController,
           keyboardType: TextInputType.phone,
+          // Solo números y máximo 10 dígitos
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
           style: const TextStyle(color: Colors.white),
           decoration: _inputDecoration('Teléfono de contacto'),
-          validator: (val) => val!.isEmpty ? 'Campo requerido' : null,
+          validator: (val) {
+            if (val == null || val.isEmpty) return 'Campo requerido';
+            if (val.length != 10) return 'El teléfono debe tener 10 números';
+            return null;
+          },
         ),
         const SizedBox(height: 20),
         const Text(

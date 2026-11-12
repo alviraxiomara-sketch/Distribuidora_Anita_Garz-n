@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/principal_admin.dart';
+import 'package:frontend/screens/profile.dart';
 import 'package:frontend/services/api_config.dart';
+import 'package:frontend/widgets/admin_drawer.dart';
 import 'package:frontend/widgets/tarjeta_notificacion_admin.dart';
 
 class NotificacionesAdmin extends StatefulWidget {
@@ -208,13 +211,31 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF031A2E),
+      drawer: const AdminDrawer(),
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
-        title: const Text(
-          'Gestión de Pedidos (Admin)',
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            tooltip: 'Inicio',
+            onPressed: () => Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const PrincipalAdminScreen()),
+              (route) => false,
+            ),
+            icon: const Icon(Icons.home_outlined, color: Colors.white, size: 26),
+          ),
+          IconButton(
+            tooltip: 'Perfil',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -226,33 +247,57 @@ class _NotificacionesAdminState extends State<NotificacionesAdmin> {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: const Color(0xFF00A8FF), width: 2),
           ),
-          child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
-              : _notificaciones.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No hay notificaciones de pedidos',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _notificaciones.length,
-                      itemBuilder: (context, index) {
-                        final noti = _notificaciones[index];
-                        final idNoti =
-                            noti['id_notificacion'] ?? noti['id'] ?? index;
+          child: Column(
+            children: [
+              // Etiqueta superior, igual que en la pantalla del cliente
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF084B75),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF00A8FF), width: 1.5),
+                ),
+                child: const Text(
+                  'Historial de Notificaciones',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
+                      : _notificaciones.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No hay notificaciones de pedidos',
+                                style: TextStyle(color: Colors.white70, fontSize: 14),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _notificaciones.length,
+                              itemBuilder: (context, index) {
+                                final noti = _notificaciones[index];
+                                final idNoti =
+                                    noti['id_notificacion'] ?? noti['id'] ?? index;
 
-                        return TarjetaNotificacionAdmin(
-                          notificacion: noti,
-                          onEliminar: () => _eliminarNotificacion(idNoti, index),
-                          onVerComprobante: (url) =>
-                              _mostrarComprobanteAmpliado(context, url),
-                          onCambiarEstado: (estado) =>
-                              _cambiarEstadoPedido(noti, estado),
-                        );
-                      },
-                    ),
+                                return TarjetaNotificacionAdmin(
+                                  notificacion: noti,
+                                  onEliminar: () => _eliminarNotificacion(idNoti, index),
+                                  onVerComprobante: (url) =>
+                                      _mostrarComprobanteAmpliado(context, url),
+                                  onCambiarEstado: (estado) =>
+                                      _cambiarEstadoPedido(noti, estado),
+                                );
+                              },
+                            ),
+              ),
+            ],
+          ),
         ),
       ),
     );

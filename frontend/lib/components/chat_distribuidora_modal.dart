@@ -30,6 +30,8 @@ class _ChatDistribuidoraModalState extends State<ChatDistribuidoraModal> {
   void initState() {
     super.initState();
     _sesionId = 'sesion_cliente_${DateTime.now().millisecondsSinceEpoch}';
+    // Despierta el servidor de Render apenas se abre el chat
+    ChatDistribuidoraService.despertarServidor();
   }
 
   void _enviarMensaje() async {

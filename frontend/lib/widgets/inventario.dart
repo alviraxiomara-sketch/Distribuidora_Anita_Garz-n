@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+/// Un producto se considera AGOTADO cuando su stock es menor o igual a este valor.
+///  - 0 -> agotado solo cuando llega a 0 (requiere que la BD permita stock 0)
+///  - 1 -> agotado cuando queda 1 unidad (útil si la BD no deja llegar a 0)
+const int kStockAgotadoHasta = 0;
+
 /// Etiqueta superior "inventario"
 class BadgeInventario extends StatelessWidget {
   const BadgeInventario({super.key});
@@ -130,7 +135,7 @@ class InventarioItemCard extends StatelessWidget {
 
     late final Color color;
     late final String estado;
-    if (stockActual <= 0) {
+    if (stockActual <= kStockAgotadoHasta) {
       color = Colors.red;
       estado = 'Agotado';
     } else if (stockActual < stockMinimo) {

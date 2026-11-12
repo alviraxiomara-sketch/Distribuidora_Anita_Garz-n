@@ -27,6 +27,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   List<dynamic> _filtrada = [];
   List<dynamic> _categoriasList = [];
   Map<int, int> _catPorProducto = {}; // id_producto -> id_categoria
+  Map<String, int> _catPorClave = {}; // nombre|presentacion|precio -> id_categoria
   bool _isLoading = true;
   int? _categoriaSel;
   bool _soloBajo = false;
@@ -82,16 +83,27 @@ class _InventarioScreenState extends State<InventarioScreen> {
         final List lista = decoded is List
             ? decoded
             : (decoded['data'] ?? decoded['productos'] ?? []);
-        final mapa = <int, int>{};
+        final porId = <int, int>{};
+        final porClave = <String, int>{};
         for (final p in lista) {
+          final idC = _extraerCategoria(p);
+          if (idC == null) continue;
           final idP = int.tryParse((p['id_producto'] ?? p['id'] ?? '').toString());
-          final idC = int.tryParse((p['id_categoria'] ?? '').toString());
-          if (idP != null && idC != null) mapa[idP] = idC;
+          if (idP != null) porId[idP] = idC;
+          porClave[_claveProducto(p)] = idC;
         }
-        if (mounted) setState(() => _catPorProducto = mapa);
+        debugPrint('INVENTARIO: /productos=${lista.length}, con categoría=${porId.length}');
+        if (mounted) {
+          setState(() {
+            _catPorProducto = porId;
+            _catPorClave = porClave;
+          });
+        }
         _filtrarInventario();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('INVENTARIO: error cargando /productos: $e');
+    }
   }
 
   Future<void> _obtenerInventario() async {
@@ -150,16 +162,39 @@ class _InventarioScreenState extends State<InventarioScreen> {
   int _stockActual(dynamic item) => _aInt(item['stock_actual'] ?? item['cantidad']);
   int _stockMinimo(dynamic item) => _aInt(item['stock_minimo'] ?? 20);
   bool _esStockBajo(dynamic item) => _stockActual(item) < _stockMinimo(item);
-  bool _esAgotado(dynamic item) => _stockActual(item) <= 0;
+  bool _esAgotado(dynamic item) => _stockActual(item) <= kStockAgotadoHasta;
+
+  // Saca el id de categoría de un producto, sin importar cómo venga el dato
+  int? _extraerCategoria(dynamic p) {
+    if (p is! Map) return null;
+    dynamic v = p['id_categoria'] ?? p['categoria_id'];
+    if (v == null) {
+      final c = p['categorias'] ?? p['categoria'];
+      v = c is Map ? (c['id_categoria'] ?? c['id']) : c;
+    }
+    return int.tryParse((v ?? '').toString());
+  }
+
+  // Clave para identificar un producto cuando no viene su id
+  String _claveProducto(dynamic p) {
+    final n = (p['nombre'] ?? '').toString().trim().toLowerCase();
+    final pr = (p['presentacion'] ?? '').toString().trim().toLowerCase();
+    final pc = _aInt(p['precio_detal'] ?? p['precio']);
+    return '$n|$pr|$pc';
+  }
 
   int? _idCategoria(dynamic item) {
     final p = item['productos'] ?? item;
-    final directo =
-        int.tryParse((p['id_categoria'] ?? item['id_categoria'] ?? '').toString());
+    final directo = _extraerCategoria(p) ?? _extraerCategoria(item);
     if (directo != null) return directo;
+
     final idProd = int.tryParse(
-        (item['id_producto'] ?? p['id_producto'] ?? p['id'] ?? '').toString());
-    return idProd == null ? null : _catPorProducto[idProd];
+        (item['id_producto'] ?? (p is Map ? (p['id_producto'] ?? p['id']) : null) ?? '')
+            .toString());
+    if (idProd != null && _catPorProducto.containsKey(idProd)) {
+      return _catPorProducto[idProd];
+    }
+    return _catPorClave[_claveProducto(p)];
   }
 
   String? _nombreCategoria(dynamic item) {
@@ -188,7 +223,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
       if (!nombre.contains(query)) return false;
       if (_categoriaSel != null && _idCategoria(item) != _categoriaSel) return false;
       // "Stock bajo" no incluye los agotados (igual que el resumen de arriba)
-      if (_soloBajo && !(_stockActual(item) > 0 && _esStockBajo(item))) return false;
+      if (_soloBajo && !(!_esAgotado(item) && _esStockBajo(item))) return false;
       if (_soloAgotados && !_esAgotado(item)) return false;
       return true;
     }).toList();
@@ -201,6 +236,11 @@ class _InventarioScreenState extends State<InventarioScreen> {
       if (porNombre != 0) return porNombre;
       return _aInt(pa['precio_detal']).compareTo(_aInt(pb['precio_detal']));
     });
+
+    if (_categoriaSel != null) {
+      final sinCat = _lista.where((i) => _idCategoria(i) == null).length;
+      debugPrint('FILTRO categoría=$_categoriaSel -> ${resultado.length} de ${_lista.length} (sin categoría: $sinCat)');
+    }
 
     if (mounted) setState(() => _filtrada = resultado);
   }
@@ -391,8 +431,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
               const SizedBox(height: 14),
               InventarioResumen(
                 total: _lista.length,
-                bajos: _lista.where((i) => _stockActual(i) > 0 && _esStockBajo(i)).length,
-                agotados: _lista.where((i) => _stockActual(i) <= 0).length,
+                bajos: _lista.where((i) => !_esAgotado(i) && _esStockBajo(i)).length,
+                agotados: _lista.where((i) => _esAgotado(i)).length,
               ),
               const SizedBox(height: 14),
               _buildFiltros(),
