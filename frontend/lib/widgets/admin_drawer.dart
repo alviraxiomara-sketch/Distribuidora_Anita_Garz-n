@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/ayuda.dart';
 import 'package:frontend/screens/ingresar_producto.dart';
 import 'package:frontend/screens/inventario.dart';
 import 'package:frontend/screens/notificaciones_admin.dart';
 import 'package:frontend/screens/stock.dart';
+import 'package:frontend/screens/ventas_admin.dart';
 import 'package:frontend/services/api_config.dart';
 
 class AdminDrawer extends StatefulWidget {
@@ -190,23 +192,6 @@ class _AdminDrawerState extends State<AdminDrawer> {
             },
           ),
 
-          // Opción Control de Stock
-          _buildAdminOption(
-            context: context,
-            icon: Icons.numbers_rounded,
-            title: 'Control de Stock',
-            subtitle: 'Existencias y cantidades',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ControlStockScreen(),
-                ),
-              );
-            },
-          ),
-
           // Opción Agregar Producto
           _buildAdminOption(
             context: context,
@@ -224,7 +209,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
             },
           ),
 
-          // Opción Notificaciones con badge dinámico (apuntando a NotificacionesAdmin)
+          // Opción Notificaciones con badge dinámico
           _buildAdminOption(
             context: context,
             icon: Icons.notifications_none_rounded,
@@ -233,8 +218,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
             badgeCount: _notificacionesPendientes > 0 ? _notificacionesPendientes : null,
             onTap: () async {
               Navigator.pop(context); // Cierra el menú lateral (Drawer)
-              
-              // Navega a la pantalla de gestión de pedidos
+
               await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -242,12 +226,47 @@ class _AdminDrawerState extends State<AdminDrawer> {
                 ),
               );
 
-              // 👇 Actualiza el estado al regresar para limpiar el badge rojo al instante
+              // Actualiza el estado al regresar para limpiar el badge
+              if (!mounted) return;
               setState(() {
                 _notificacionesPendientes = 0;
               });
-              
+
               _obtenerNotificacionesPendientes();
+            },
+          ),
+
+          // Opción Ventas
+          _buildAdminOption(
+            context: context,
+            icon: Icons.bar_chart_rounded,
+            title: 'Ventas',
+            subtitle: 'Reportes diarios y mensuales',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const VentasAdmin(),
+                ),
+              );
+            },
+          ),
+
+          // Opción Ayuda
+          _buildAdminOption(
+            context: context,
+            icon: Icons.help_outline_rounded,
+            title: 'Ayuda',
+            subtitle: 'Preguntas frecuentes y soporte',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AyudaScreen(),
+                ),
+              );
             },
           ),
 

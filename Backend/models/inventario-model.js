@@ -17,12 +17,17 @@ export const obtenerInventario = async () => {
                 updated_at,
                 productos (
                     id_producto,
+                    id_categoria,
                     nombre,
                     presentacion,
                     precio_detal,
                     precio_mayorista,
                     imagen_url,
-                    activo
+                    activo,
+                    categorias (
+                        id_categoria,
+                        nombre
+                    )
                 )
             `)
             .order("id_inventario", {
@@ -52,12 +57,17 @@ export const obtenerInventarioPorProducto = async (
                 updated_at,
                 productos (
                     id_producto,
+                    id_categoria,
                     nombre,
                     presentacion,
                     precio_detal,
                     precio_mayorista,
                     imagen_url,
-                    activo
+                    activo,
+                    categorias (
+                        id_categoria,
+                        nombre
+                    )
                 )
             `)
             .eq("id_producto", id_producto)
