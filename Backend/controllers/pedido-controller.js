@@ -44,7 +44,7 @@ const subirComprobanteAStorage = async (base64Data) => {
 export const crear = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
-        const { nombre_cliente, direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
+        const { nombre_cliente, direccion_entrega, telefono_contacto, metodo_pago, comprobante_url, ids_detalle } = req.body;
 
         if (!direccion_entrega || !telefono_contacto) {
             return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
@@ -74,11 +74,25 @@ export const crear = async (req, res) => {
             return res.status(400).json({ error: "El carrito está vacío o no se pudo cargar" });
         }
 
+        // Solo se compran los productos seleccionados en el carrito.
+        // Si la app no envía "ids_detalle", se compra todo el carrito (comportamiento anterior).
+        let detallesCarrito = carrito.detalle_carrito;
+        if (Array.isArray(ids_detalle) && ids_detalle.length > 0) {
+            const idsSeleccionados = ids_detalle.map(Number);
+            detallesCarrito = carrito.detalle_carrito.filter((d) =>
+                idsSeleccionados.includes(Number(d.id_detalle_carrito))
+            );
+        }
+
+        if (detallesCarrito.length === 0) {
+            return res.status(400).json({ error: "Los productos seleccionados ya no están en el carrito" });
+        }
+
         let total = 0;
         const detallesValidados = [];
         const resumenProductos = [];
 
-        for (const detalle of carrito.detalle_carrito) {
+        for (const detalle of detallesCarrito) {
             const { data: producto, error: errorProducto } = await supabase
                 .from("productos")
                 .select(`id_producto, nombre, presentacion, tapa, precio_detal, precio_mayorista, cantidad_minima_mayorista, activo`)
@@ -175,7 +189,8 @@ export const crear = async (req, res) => {
         await supabase
             .from("detalle_carrito")
             .delete()
-            .eq("id_carrito", carrito.id_carrito);
+            .eq("id_carrito", carrito.id_carrito)
+            .in("id_detalle_carrito", detallesCarrito.map((d) => d.id_detalle_carrito));
 
         // Búsqueda directa por rol ADMIN exacto
         const { data: adminUsers, error: errorAdmin } = await supabase

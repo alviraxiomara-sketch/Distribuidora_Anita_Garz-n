@@ -157,6 +157,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'telefono_contacto': _telefonoController.text,
           'metodo_pago': _metodoPago,
           'comprobante_url': comprobanteBase64,
+          // Solo se compran (y se quitan del carrito) los productos seleccionados
+          'ids_detalle': widget.productosSeleccionados
+              .map((item) => item['id_detalle_carrito'])
+              .toList(),
         }),
       );
 
