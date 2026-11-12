@@ -178,21 +178,15 @@ export const crear = async (req, res) => {
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // Búsqueda flexible de administradores (soporta 'ADMIN', 'admin', etc.)
-        const { data: todosLosUsuarios, error: errorUsuarios } = await supabase
+        // Búsqueda directa por rol ADMIN exacto
+        const { data: adminUsers, error: errorAdmin } = await supabase
             .from("usuarios")
-            .select("id_usuario, rol, role");
+            .select("id_usuario, correo, rol")
+            .eq("rol", "ADMIN");
 
-        if (errorUsuarios) {
-            console.error("❌ Error consultando usuarios para notificar admin:", errorUsuarios);
+        if (errorAdmin) {
+            console.error("❌ Error consultando administradores:", errorAdmin);
         }
-
-        const adminUsers = todosLosUsuarios?.filter(u => {
-            const rolUser = u.rol || u.role;
-            if (!rolUser) return false;
-            const rolLower = rolUser.toString().toLowerCase().trim();
-            return rolLower.includes('admin');
-        }) || [];
 
         const clienteNombreFinal = nombre_cliente || req.usuario.nombre || 'Cliente';
         const mensajeAdmin = `Cliente: ${clienteNombreFinal}\nDirección: ${direccion_entrega}\nTeléfono: ${telefono_contacto}\nMétodo: ${metodo_pago || 'Nequi'}\nProductos:\n• ${resumenProductos.join('\n• ')}\nTotal: $${total}`;
@@ -204,7 +198,7 @@ export const crear = async (req, res) => {
                     id_usuario: admin.id_usuario,
                     titulo: `Nuevo comprobante de pago #${nuevoPedido.id_pedido} por validar`,
                     mensaje: mensajeAdmin,
-                    comprobantes: urlComprobanteFinal, // 👈 Aquí SÍ va el comprobante
+                    comprobantes: urlComprobanteFinal, // 👈 Aquí SÍ va el comprobante para el admin
                     leida: false
                 }]);
 
@@ -213,7 +207,7 @@ export const crear = async (req, res) => {
                 }
             }
         } else {
-            console.warn("⚠️ No se encontraron usuarios administradores para notificar.");
+            console.warn("⚠️ No se encontró ningún usuario con rol 'ADMIN'.");
         }
 
         // 2. Notificación AL CLIENTE (DETALLADA con sus productos, pero SIN comprobante)
