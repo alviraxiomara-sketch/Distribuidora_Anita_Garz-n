@@ -113,9 +113,8 @@ export const crear = async (req, res) => {
                 precio_unitario: precioUnitario,
                 subtotal
             });
-
-            const detalleExtra = producto.tapa ? ` (Tapa: ${producto.tapa})` : (producto.presentacion ? ` (${producto.presentacion})` : '');
-            resumenProductos.push(`${detalle.cantidad} x ${producto.nombre}${detalleExtra} ($${precioUnitario} c/u) = $${subtotal}`);
+           const detalleExtra = producto.tapa ? ` (Tapa: ${producto.tapa})` : (producto.presentacion ? ` (${producto.presentacion})` : '');
+            resumenProductos.push(`${detalle.cantidad} x ${producto.nombre}${detalleExtra}`);
         }
 
         const { data: nuevoPedido, error: errorPedido } = await supabase
