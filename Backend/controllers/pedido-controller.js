@@ -25,7 +25,10 @@ const subirComprobanteAStorage = async (base64Data) => {
             .from('comprobantes')
             .upload(fileName, fileUint8Array, { contentType, upsert: true });
 
-        if (errorStorage) return null;
+        if (errorStorage) {
+            console.error("❌ Error subiendo comprobante a Storage:", errorStorage);
+            return null;
+        }
 
         const { data: publicUrlData } = supabase.storage
             .from('comprobantes')
@@ -33,6 +36,7 @@ const subirComprobanteAStorage = async (base64Data) => {
 
         return publicUrlData.publicUrl;
     } catch (err) {
+        console.error("❌ Excepción en subirComprobanteAStorage:", err);
         return null;
     }
 };
@@ -40,7 +44,7 @@ const subirComprobanteAStorage = async (base64Data) => {
 export const crear = async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
-        const { direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
+        const { nombre_cliente, direccion_entrega, telefono_contacto, metodo_pago, comprobante_url } = req.body;
 
         if (!direccion_entrega || !telefono_contacto) {
             return res.status(400).json({ error: "Faltan datos obligatorios de entrega o contacto" });
@@ -111,7 +115,7 @@ export const crear = async (req, res) => {
             });
 
             const detalleExtra = producto.tapa ? ` (Tapa: ${producto.tapa})` : (producto.presentacion ? ` (${producto.presentacion})` : '');
-            resumenProductos.push(`${producto.nombre}${detalleExtra} x${detalle.cantidad}`);
+            resumenProductos.push(`${detalle.cantidad} x ${producto.nombre}${detalleExtra} ($${precioUnitario} c/u) = $${subtotal}`);
         }
 
         const { data: nuevoPedido, error: errorPedido } = await supabase
@@ -179,6 +183,10 @@ export const crear = async (req, res) => {
             .from("usuarios")
             .select("id_usuario, rol, role");
 
+        if (errorUsuarios) {
+            console.error("❌ Error consultando usuarios para notificar admin:", errorUsuarios);
+        }
+
         const adminUsers = todosLosUsuarios?.filter(u => {
             const rolUser = u.rol || u.role;
             if (!rolUser) return false;
@@ -186,35 +194,48 @@ export const crear = async (req, res) => {
             return rolLower === 'admin' || rolLower === 'administrador';
         }) || [];
 
-        const mensajeAdmin = `Nuevo Pedido #${nuevoPedido.id_pedido}\nCliente: ${req.usuario.nombre}\nMétodo: ${metodo_pago || 'Nequi'}\nCompra: ${resumenProductos.join(', ')}\nTotal: $${total}`;
+        const clienteNombreFinal = nombre_cliente || req.usuario.nombre || 'Cliente';
+        const mensajeAdmin = `Cliente: ${clienteNombreFinal}\nDirección: ${direccion_entrega}\nTeléfono: ${telefono_contacto}\nMétodo: ${metodo_pago || 'Nequi'}\nProductos:\n• ${resumenProductos.join('\n• ')}\nTotal: $${total}`;
 
         if (adminUsers && adminUsers.length > 0) {
             for (const admin of adminUsers) {
-                await supabase.from("notificaciones").insert([{
+                const { error: errorNotiAdmin } = await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
-                    id_pedido: nuevoPedido.id_pedido,
-                    titulo: "Nuevo Pedido Recibido",
+                    titulo: `Nuevo comprobante de pago #${nuevoPedido.id_pedido} por validar`,
                     mensaje: mensajeAdmin,
-                    comprobantes: urlComprobanteFinal, // <--- CORREGIDO: ahora usa 'comprobantes' (con 's')
+                    comprobantes: urlComprobanteFinal,
                     leida: false
                 }]);
+
+                if (errorNotiAdmin) {
+                    console.error("❌ Error insertando notificación admin:", errorNotiAdmin);
+                } else {
+                    console.log(`✅ Notificación enviada al admin ID: ${admin.id_usuario}`);
+                }
             }
+        } else {
+            console.warn("⚠️ No se encontraron usuarios con rol 'admin' o 'administrador'");
         }
 
-        // Notificación inicial al Cliente con su id_pedido asignado
-        const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} (${resumenProductos.join(', ')}) fue realizado con éxito y está en revisión.`;
-        await supabase.from("notificaciones").insert([{
+        // Notificación inicial al Cliente
+        const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} fue realizado con éxito y está en revisión.`;
+        const { error: errorNotiCliente } = await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
-            id_pedido: nuevoPedido.id_pedido,
             titulo: "¡Pedido Realizado con Éxito!",
             mensaje: mensajeCliente,
             leida: false
         }]);
 
+        if (errorNotiCliente) {
+            console.error("❌ Error insertando notificación cliente:", errorNotiCliente);
+        } else {
+            console.log(`✅ Notificación enviada al cliente ID: ${id_usuario}`);
+        }
+
         try {
             await enviarCorreoPedidoExitoso(
                 req.usuario.correo,
-                req.usuario.nombre,
+                clienteNombreFinal,
                 nuevoPedido.id_pedido,
                 total,
                 metodo_pago || 'Nequi'
@@ -227,6 +248,7 @@ export const crear = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("🔴 Error general en crear pedido:", error);
         return res.status(500).json({ error: error.message });
     }
 };
@@ -317,13 +339,16 @@ export const cambiarEstadoYNotificar = async (req, res) => {
             ? `Tu pedido #${id} fue aprobado con éxito.`
             : `Lo sentimos, tu pedido #${id} fue rechazado.`;
 
-        await supabase.from("notificaciones").insert([{
+        const { error: errorNotiEstado } = await supabase.from("notificaciones").insert([{
             id_usuario: pedido.id_usuario,
-            id_pedido: Number(id),
             titulo: tituloNoti,
             mensaje: mensajeNoti,
             leida: false
         }]);
+
+        if (errorNotiEstado) {
+            console.error("❌ Error insertando notificación de cambio de estado:", errorNotiEstado);
+        }
 
         return res.status(200).json({ mensaje: `Pedido ${estado.toLowerCase()} correctamente` });
     } catch (error) {
