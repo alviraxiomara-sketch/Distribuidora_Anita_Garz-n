@@ -178,7 +178,7 @@ export const crear = async (req, res) => {
             .delete()
             .eq("id_carrito", carrito.id_carrito);
 
-        // Búsqueda robusta de administradores para notificaciones
+        // Búsqueda de administradores para notificaciones
         const { data: todosLosUsuarios, error: errorUsuarios } = await supabase
             .from("usuarios")
             .select("id_usuario, rol, role");
@@ -197,39 +197,36 @@ export const crear = async (req, res) => {
         const clienteNombreFinal = nombre_cliente || req.usuario.nombre || 'Cliente';
         const mensajeAdmin = `Cliente: ${clienteNombreFinal}\nDirección: ${direccion_entrega}\nTeléfono: ${telefono_contacto}\nMétodo: ${metodo_pago || 'Nequi'}\nProductos:\n• ${resumenProductos.join('\n• ')}\nTotal: $${total}`;
 
+        // 1. Notificación AL ADMIN (CON comprobante y formato completo)
         if (adminUsers && adminUsers.length > 0) {
             for (const admin of adminUsers) {
                 const { error: errorNotiAdmin } = await supabase.from("notificaciones").insert([{
                     id_usuario: admin.id_usuario,
                     titulo: `Nuevo comprobante de pago #${nuevoPedido.id_pedido} por validar`,
                     mensaje: mensajeAdmin,
-                    comprobantes: urlComprobanteFinal,
+                    comprobantes: urlComprobanteFinal, // 👈 Aquí SÍ va el comprobante
                     leida: false
                 }]);
 
                 if (errorNotiAdmin) {
                     console.error("❌ Error insertando notificación admin:", errorNotiAdmin);
-                } else {
-                    console.log(`✅ Notificación enviada al admin ID: ${admin.id_usuario}`);
                 }
             }
-        } else {
-            console.warn("⚠️ No se encontraron usuarios con rol 'admin' o 'administrador'");
         }
 
-        // Notificación inicial al Cliente
-        const mensajeCliente = `Tu pedido #${nuevoPedido.id_pedido} fue realizado con éxito y está en revisión.`;
+        // 2. Notificación AL CLIENTE (DETALLADA con sus productos, pero SIN comprobante en la notificación)
+        const mensajeCliente = `¡Tu pedido #${nuevoPedido.id_pedido} fue realizado con éxito!\n\nProductos:\n• ${resumenProductos.join('\n• ')}\nMétodo de pago: ${metodo_pago || 'Nequi'}\nTotal pagado: $${total}\n\nTu pedido está en revisión.`;
+        
         const { error: errorNotiCliente } = await supabase.from("notificaciones").insert([{
             id_usuario: id_usuario,
             titulo: "¡Pedido Realizado con Éxito!",
             mensaje: mensajeCliente,
+            comprobantes: null, // 👈 El cliente NO recibe el comprobante en su notificación
             leida: false
         }]);
 
         if (errorNotiCliente) {
             console.error("❌ Error insertando notificación cliente:", errorNotiCliente);
-        } else {
-            console.log(`✅ Notificación enviada al cliente ID: ${id_usuario}`);
         }
 
         try {
@@ -343,6 +340,7 @@ export const cambiarEstadoYNotificar = async (req, res) => {
             id_usuario: pedido.id_usuario,
             titulo: tituloNoti,
             mensaje: mensajeNoti,
+            comprobantes: null,
             leida: false
         }]);
 
