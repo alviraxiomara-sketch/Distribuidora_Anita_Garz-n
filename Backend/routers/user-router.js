@@ -1,9 +1,16 @@
 import { Router } from "express";
-import {listarUsuarios, obtenerUsuario, cambiarRol, activarUsuario, desactivarUsuario} from "../controllers/user-controller.js";
+import {listarUsuarios, obtenerUsuario, cambiarRol, activarUsuario, desactivarUsuario, eliminarMiCuenta} from "../controllers/user-controller.js";
 import { verificarToken } from "../middlewares/auth-middleware.js";
 import { verificarRol } from "../middlewares/rol-middleware.js";
 
 const router = Router();
+
+// Cualquier usuario autenticado puede eliminar SU propia cuenta
+router.delete(
+    "/me",
+    verificarToken,
+    eliminarMiCuenta
+);
 
 // Solo ADMIN
 

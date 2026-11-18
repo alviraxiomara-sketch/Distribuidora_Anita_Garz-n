@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart' as img_picker;
 import 'package:frontend/screens/login.dart';
 import 'package:frontend/services/auth_service.dart';
 import 'package:frontend/widgets/login.dart';
+import 'package:frontend/widgets/terminos_checkbox.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController(), _confirmPassword = TextEditingController();
 
   bool _ocultarPass = true, _ocultarConfirmPass = true, _cargando = false;
+  bool _aceptaTerminos = false;
   final AuthService _authService = AuthService();
   final img_picker.ImagePicker _picker = img_picker.ImagePicker();
   img_picker.XFile? _foto;
@@ -48,6 +50,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (_password.text != _confirmPassword.text) return _msg('Las contraseñas no coinciden', Colors.orange);
     if (_password.text.length < 6) return _msg('La contraseña debe tener al menos 6 caracteres', Colors.orange);
+
+    if (!_aceptaTerminos) {
+      return _msg('Debes aceptar los Términos, Políticas y Condiciones', Colors.orange);
+    }
 
     setState(() => _cargando = true);
     try {
@@ -110,6 +116,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     AuthTextField(hint: 'Telefono', controller: _telefono),
                     AuthTextField(hint: 'Contraseña', controller: _password, isPassword: true, obscureText: _ocultarPass, onToggleVisibility: () => setState(() => _ocultarPass = !_ocultarPass)),
                     AuthTextField(hint: 'Confirmar contraseña', controller: _confirmPassword, isPassword: true, obscureText: _ocultarConfirmPass, onToggleVisibility: () => setState(() => _ocultarConfirmPass = !_ocultarConfirmPass)),
+                    const SizedBox(height: 6),
+                    TerminosCheckbox(
+                      value: _aceptaTerminos,
+                      onChanged: (v) => setState(() => _aceptaTerminos = v),
+                    ),
                     const SizedBox(height: 10),
                     _cargando ? const CircularProgressIndicator(color: Color(0xFF00A8FF)) : PrimaryCustomButton(text: 'Crear Cuenta', onPressed: _handleRegister),
                     const SizedBox(height: 10),

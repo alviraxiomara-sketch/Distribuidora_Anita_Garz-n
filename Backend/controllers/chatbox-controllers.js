@@ -19,10 +19,11 @@ const getGroq = () => {
 };
 
 // Los modelos se pueden cambiar desde Render (variable GROQ_MODELS) sin tocar el código.
-// Ejemplo: GROQ_MODELS=llama-3.3-70b-versatile,llama-3.1-8b-instant
+// Ejemplo: GROQ_MODELS=openai/gpt-oss-120b,openai/gpt-oss-20b
 // Si Groq retira un modelo, solo cambias esa variable y reinicias.
+// (llama-3.3-70b-versatile y llama-3.1-8b-instant fueron retirados el 16/08/2026)
 const MODELOS = (
-  process.env.GROQ_MODELS || "llama-3.3-70b-versatile,llama-3.1-8b-instant"
+  process.env.GROQ_MODELS || "openai/gpt-oss-120b,openai/gpt-oss-20b"
 )
   .split(",")
   .map((m) => m.trim())
@@ -153,7 +154,10 @@ REGLAS DE ATENCIÓN:
             { role: "user", content: mensaje.trim() },
           ],
           temperature: 0.1,
-          max_tokens: 500,
+          // Los modelos gpt-oss "razonan" y ese razonamiento cuenta en los tokens,
+          // por eso se sube el límite y se pide razonamiento bajo (más rápido).
+          max_tokens: 1500,
+          ...(modelo.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
         });
 
         respuestaTexto = completion.choices[0]?.message?.content?.trim();

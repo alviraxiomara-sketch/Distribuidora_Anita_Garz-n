@@ -115,7 +115,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
         headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
       );
 
-      if (res.statusCode == 200 && mounted) {
+            if (res.statusCode == 200 && mounted) {
+        debugPrint('INVENTARIO RAW: ${res.body}');
         final decoded = jsonDecode(res.body);
         List<dynamic> temp = [];
         if (decoded is List) {

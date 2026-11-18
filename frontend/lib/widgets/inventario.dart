@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 /// Un producto se considera AGOTADO cuando su stock es menor o igual a este valor.
 ///  - 0 -> agotado solo cuando llega a 0 (requiere que la BD permita stock 0)
 ///  - 1 -> agotado cuando queda 1 unidad (útil si la BD no deja llegar a 0)
-const int kStockAgotadoHasta = 0;
+///
+/// En Supabase el stock mínimo posible es 1, por eso aquí va 1.
+const int kStockAgotadoHasta = 1;
 
 /// Etiqueta superior "inventario"
 class BadgeInventario extends StatelessWidget {
@@ -110,6 +112,22 @@ class InventarioItemCard extends StatelessWidget {
 
   int _aInt(dynamic v) => (num.tryParse(v?.toString() ?? '') ?? 0).round();
 
+  String _buscarTapa(dynamic p, Map<String, dynamic> item) {
+    for (final fuente in [p, item]) {
+      if (fuente is! Map) continue;
+      for (final e in fuente.entries) {
+        if (e.key.toString().toLowerCase().contains('tapa') &&
+            e.value != null &&
+            e.value is! Map &&
+            e.value is! List) {
+          final t = e.value.toString().trim();
+          if (t.isNotEmpty && t.toLowerCase() != 'null') return t;
+        }
+      }
+    }
+    return '';
+  }
+
   String _formatoPrecio(dynamic v) {
     final n = num.tryParse(v?.toString() ?? '');
     if (n == null) return '\$${v ?? 0}';
@@ -129,6 +147,10 @@ class InventarioItemCard extends StatelessWidget {
     final precio = p['precio_detal'] ?? p['precio'] ?? 0;
     final presentacion = (p['presentacion'] ?? 'Unidad').toString();
     final imagenUrl = p['imagen_url'] ?? producto['imagen_url'];
+
+    // Tapa tal cual viene de la base de datos (campo "tapa")
+    // Busca cualquier campo cuyo nombre contenga "tapa" (tapa, tipo_tapa, etc.)
+    final tapa = _buscarTapa(p, producto);
 
     final stockActual = _aInt(producto['stock_actual'] ?? producto['cantidad']);
     final stockMinimo = _aInt(producto['stock_minimo'] ?? 20);
@@ -193,6 +215,9 @@ class InventarioItemCard extends StatelessWidget {
                                       if (categoria != null &&
                                           categoria!.isNotEmpty)
                                         _chip(categoria!, Colors.white,
+                                            const Color(0xFF063B5D)),
+                                      if (tapa.isNotEmpty)
+                                        _chip(tapa, const Color(0xFFB3E5FC),
                                             const Color(0xFF063B5D)),
                                     ],
                                   ),

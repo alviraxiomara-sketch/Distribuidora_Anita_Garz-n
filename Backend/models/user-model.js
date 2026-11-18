@@ -168,3 +168,15 @@ export const obtenerUsuarioCompletoPorId = async (id_usuario) => {
 
     return { data, error };
 };
+
+// Eliminar usuario
+export const eliminarUsuario = async (id_usuario) => {
+    const { data, error } = await supabase
+        .from("usuarios")
+        .delete()
+        .eq("id_usuario", id_usuario)
+        .select("id_usuario")
+        .maybeSingle();
+
+    return { data, error };
+};
