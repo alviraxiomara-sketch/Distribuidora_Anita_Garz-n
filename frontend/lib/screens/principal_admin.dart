@@ -109,47 +109,29 @@ class _PrincipalAdminScreenState extends State<PrincipalAdminScreen> {
                 border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.5)),
               ),
               child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Gestión del Sistema',
-                    style: TextStyle(color: Color(0xFF00A8FF), fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Georgia'),
-                  ),
-                  SizedBox(height: 16),
-                  AdminBenefitRow(icon: Icons.inventory_rounded, title: 'Control de Inventario', subtitle: 'Supervisa existencias y stock de productos.'),
-                  SizedBox(height: 14),
-                  AdminBenefitRow(icon: Icons.local_shipping_outlined, title: 'Seguimiento de Pedidos', subtitle: 'Administra las solicitudes y entregas en curso.'),
-                  SizedBox(height: 14),
-                  AdminBenefitRow(icon: Icons.people_alt_outlined, title: 'Gestión de Clientes', subtitle: 'Revisa registros y perfiles de usuarios activos.'),
-                ],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Gestión del Sistema',
+                style: TextStyle(color: Color(0xFF00A8FF), fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Georgia'),
               ),
+              SizedBox(height: 16),
+              AdminBenefitRow(icon: Icons.inventory_rounded, title: 'Control de Inventario', subtitle: 'Supervisa existencias y stock de productos.'),
+              SizedBox(height: 14),
+              AdminBenefitRow(icon: Icons.local_shipping_outlined, title: 'Seguimiento de Pedidos', subtitle: 'Administra las solicitudes y entregas en curso.'),
+              SizedBox(height: 14),
+              AdminBenefitRow(icon: Icons.people_alt_outlined, title: 'Gestión de Clientes', subtitle: 'Revisa registros y perfiles de usuarios activos.'),
+              SizedBox(height: 14),
+              // 👇 NUEVO
+              AdminBenefitRow(icon: Icons.delivery_dining_rounded, title: 'Envíos y Domicilios', subtitle: 'El costo de los envíos y domicilios lo paga el cliente.'),
+            ],
+          ),
             ),
             const SizedBox(height: 30),
           ],
         ),
       ),
       bottomNavigationBar: const HomeFooterContacts(isAdmin: true),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'fab_chat_home_admin',
-        backgroundColor: const Color(0xFF00A8FF),
-        elevation: 8,
-        shape: const CircleBorder(),
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: const Color(0xFF032238),
-          builder: (_) => const ChatDistribuidoraModal(),
-        ),
-        child: ClipOval(
-          child: Image.asset(
-            'assets/images/robot.jpg',
-            width: 52,
-            height: 52,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy, color: Colors.white, size: 28),
-          ),
-        ),
-      ),
     );
   }
 }

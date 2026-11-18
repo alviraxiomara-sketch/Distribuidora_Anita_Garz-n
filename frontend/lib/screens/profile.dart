@@ -34,11 +34,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _fotoGuardada;
   bool _cargando = false;
   bool _editando = false;
+  bool _esAdmin = false; // NUEVO: controla si se muestra el chat
 
   @override
   void initState() {
     super.initState();
+    _verificarRol(); // NUEVO
     _cargarDatosServidor();
+  }
+
+  // NUEVO: lee el rol guardado para saber si es admin
+  Future<void> _verificarRol() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final usuarioString = prefs.getString('usuario');
+      if (usuarioString != null && usuarioString.isNotEmpty) {
+        final Map<String, dynamic> usuarioMap = jsonDecode(usuarioString);
+        final rol = usuarioMap['rol'] ?? usuarioMap['tipo_usuario'] ?? '';
+        if (mounted) {
+          setState(() => _esAdmin = rol.toString().toUpperCase() == 'ADMIN');
+        }
+      }
+    } catch (_) {
+      // Si falla, se trata como cliente (_esAdmin = false)
+    }
   }
 
   // Carga los datos frescos directamente del backend (y de respaldo usa local)
@@ -346,14 +365,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-      floatingActionButton: ChatFab(
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => const ChatDistribuidoraModal(),
-        ),
-      ),
+      // CAMBIO: el chat solo aparece para clientes, no para el admin
+      floatingActionButton: _esAdmin
+          ? null
+          : ChatFab(
+              onPressed: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const ChatDistribuidoraModal(),
+              ),
+            ),
     );
   }
 }
