@@ -117,18 +117,18 @@ packages:
     dependency: transitive
     description:
       name: device_info_plus
-      sha256: a7fd703482b391a87d60b6061d04dfdeab07826b96f9abd8f5ed98068acc0074
+      sha256: ade1c36f8355d6284c98e4a47992ea263887ed3d1acb281e37635dd45f04c4aa
       url: "https://pub.dev"
     source: hosted
-    version: "10.1.2"
+    version: "13.3.0"
   device_info_plus_platform_interface:
     dependency: transitive
     description:
       name: device_info_plus_platform_interface
-      sha256: e1ea89119e34903dca74b883d0dd78eb762814f97fb6c76f35e9ff74d261a18f
+      sha256: "04b173a92e2d9161dfead145667037c8d834db725ce2e7b942bfe18fd2f45a46"
       url: "https://pub.dev"
     source: hosted
-    version: "7.0.3"
+    version: "8.1.0"
   equatable:
     dependency: transitive
     description:
@@ -153,6 +153,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  ffi_leak_tracker:
+    dependency: transitive
+    description:
+      name: ffi_leak_tracker
+      sha256: "4093d4ef9ca06ffe2786e73bfb25e22aa92112b9bb4ec941f11e3e6b61489a97"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
   file:
     dependency: transitive
     description:
@@ -408,14 +416,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.19.0"
-  js:
-    dependency: transitive
-    description:
-      name: js
-      sha256: "53385261521cc4a0c4658fd0ad07a7d14591cf8fc33abbceae306ddb974888dc"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.7.2"
   json_annotation:
     dependency: transitive
     description:
@@ -649,66 +649,74 @@ packages:
     dependency: transitive
     description:
       name: syncfusion_flutter_core
-      sha256: "325f519ce4ad8edd81811c21b853d72018529e353584490824da0555156ba076"
+      sha256: "8134debe4523ef329e4e62f9167d1853b2af4779219e7bb1dc03cf3a26ac571f"
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.1.43"
   syncfusion_flutter_pdf:
     dependency: transitive
     description:
       name: syncfusion_flutter_pdf
-      sha256: da7fb9d156fafdce7099dc711c1a2dc522c48361188bd4be78520b22c99bbafd
+      sha256: a18e757b2cbeb0de01f35cde2f22a9c89032919123f243c3e5c5757c2ee4b5da
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.1.43"
   syncfusion_flutter_pdfviewer:
     dependency: "direct main"
     description:
       name: syncfusion_flutter_pdfviewer
-      sha256: "0d51a728a2982bdad43bb6bf39da25ca9322e4b196f5335b2aed58ff85c7a7bf"
+      sha256: "59770d31c364034998838412efc8bcf082429b923cd4792a9d2b3c49cc71dbff"
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.1.43"
   syncfusion_flutter_signaturepad:
     dependency: transitive
     description:
       name: syncfusion_flutter_signaturepad
-      sha256: "84990394d4af761701b11d2764de52559a1ebbd2fcc0745a3ed34b563ac5b054"
+      sha256: d8eed9d387917b3c948f29fb8585d1587b6e0da117173f57629f29f2fcff2230
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.1.43"
+  syncfusion_pdfviewer_linux:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_linux
+      sha256: "543223416963db0758a43d2596f25fe2a6a5320fb08b40b6930cee4b1a2314b8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "35.2.12"
   syncfusion_pdfviewer_macos:
     dependency: transitive
     description:
       name: syncfusion_pdfviewer_macos
-      sha256: "25ae3ce2c2ef5b6ec7eb305fdfaff6049dc7d77d667e372fcdd497cf0d872f70"
+      sha256: "5fcd9ffa2855c4292a377cd11df36fc5c9e16fd15b5eaf5f7810a206d245068c"
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.2.12"
   syncfusion_pdfviewer_platform_interface:
     dependency: transitive
     description:
       name: syncfusion_pdfviewer_platform_interface
-      sha256: "680f2f1fc9499214bd368209028e27b4c3060e2c9333baf692ee8e8b41a8fda9"
+      sha256: ce1f1edfd6d1f02a4b3e8f112d7f9424bf4ac4173e33fa83bded31ae219c1d2f
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.2.12"
   syncfusion_pdfviewer_web:
     dependency: transitive
     description:
       name: syncfusion_pdfviewer_web
-      sha256: a2b840167434a023335f1ef8240a5f206003e3b2c33888e772150a9bc5e9662d
+      sha256: "33f98f65f289bf75a2618d6462b248c31252a904c7ec87bea4dac56101ed0a07"
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.2.12"
   syncfusion_pdfviewer_windows:
     dependency: transitive
     description:
       name: syncfusion_pdfviewer_windows
-      sha256: "14b7ce1a86f893888e80cabf8ae4b5f62fd8aeb406868ec3c2101a2d211f10f6"
+      sha256: a845c80d0f2a4040ba847295f132491ca0fdd4305fec0d0d5bc520838824caa7
       url: "https://pub.dev"
     source: hosted
-    version: "27.2.5"
+    version: "35.2.12"
   term_glyph:
     dependency: transitive
     description:
@@ -841,18 +849,18 @@ packages:
     dependency: transitive
     description:
       name: win32
-      sha256: d7cb55e04cd34096cd3a79b3330245f54cb96a370a1c27adb3c84b917de8b08e
+      sha256: a0b93865d5644f11cf6a8c3f6db909f1ec168958b5805f6cc684adea957cd63d
       url: "https://pub.dev"
     source: hosted
-    version: "5.15.0"
+    version: "6.4.0"
   win32_registry:
     dependency: transitive
     description:
       name: win32_registry
-      sha256: "21ec76dfc731550fd3e2ce7a33a9ea90b828fdf19a5c3bcf556fa992cfa99852"
+      sha256: "73b1d78920a9d6e03f8b4e43e612b87bf3152a0e5c5e5150267762b7c4116904"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.5"
+    version: "3.0.3"
   xdg_directories:
     dependency: transitive
     description:
@@ -865,10 +873,10 @@ packages:
     dependency: transitive
     description:
       name: xml
-      sha256: "971043b3a0d3da28727e40ed3e0b5d18b742fa5a68665cca88e74b7876d5e025"
+      sha256: "67f0aff7be013d107995e9b75bf4e7f2c3ef2dfdb2c8e68024bba0a7fd5756a4"
       url: "https://pub.dev"
     source: hosted
-    version: "6.6.1"
+    version: "7.0.1"
   yaml:
     dependency: transitive
     description:
