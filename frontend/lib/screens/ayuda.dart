@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/profile.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-import 'package:frontend/widgets/admin_drawer.dart'; // ajusta la ruta donde tengas AdminDrawer
-// import 'package:frontend/screens/perfil.dart';     // tu pantalla de perfil
+import 'package:frontend/widgets/admin_drawer.dart';
 
 class AyudaScreen extends StatelessWidget {
   const AyudaScreen({super.key});
@@ -29,10 +29,10 @@ class AyudaScreen extends StatelessWidget {
             icon: const Icon(Icons.account_circle_outlined),
             tooltip: 'Perfil',
             onPressed: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (_) => const PerfilScreen()),
-              // );
+              Navigator.push(
+               context,
+               MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
             },
           ),
         ],

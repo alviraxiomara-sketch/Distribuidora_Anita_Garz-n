@@ -1,15 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/home.dart';
+import 'package:frontend/widgets/profile.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' as img_picker;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/components/chat_distribuidora_modal.dart';
-import 'package:frontend/screens/home.dart';
 import 'package:frontend/services/api_config.dart';
 import 'package:frontend/services/auth_service.dart';
-import 'package:frontend/widgets/profile.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -42,6 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _cargarDatosServidor();
   }
 
+  // Carga los datos frescos directamente del backend (y de respaldo usa local)
   Future<void> _cargarDatosServidor() async {
     setState(() => _cargando = true);
     try {
@@ -66,9 +66,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _correo.text = usuario['correo'] ?? '';
           _telefono.text = usuario['telefono'] ?? '';
           _direccion.text = usuario['direccion'] ?? '';
-          _fotoGuardada = usuario['foto_perfil'] ?? usuario['avatar'];
+          _fotoGuardada = usuario['avatar'] ?? usuario['foto_perfil'];
         });
       } else {
+        // Respaldo con SharedPreferences si la red falla
         final datosLocales = await AuthService.getUsuario();
         setState(() {
           _nombre.text = datosLocales['nombre'] ?? '';
@@ -79,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
+      // Respaldo local si ocurre cualquier excepción
       final datosLocales = await AuthService.getUsuario();
       setState(() {
         _nombre.text = datosLocales['nombre'] ?? '';
@@ -120,18 +122,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡Perfil actualizado con éxito!'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('¡Perfil actualizado con éxito!'), backgroundColor: Colors.green),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _cargando = false);
@@ -139,21 +135,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _cerrarSesion() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      try {
-        await AuthService.logout();
-      } catch (_) {}
-    } catch (_) {}
-
+    await AuthService.logout();
     if (!mounted) return;
-
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
       (route) => false,
     );
+  }
+
+  // ==========================
+  // ELIMINAR CUENTA
+  // ==========================
+  Future<void> _confirmarEliminarCuenta() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF063B5D),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF00A8FF)),
+        ),
+        title: const Text(
+          'Eliminar cuenta',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          '¿Estás seguro de eliminar la cuenta? Esta acción no se puede deshacer.',
+          style: TextStyle(color: Color(0xFFB0BEC5)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sí, eliminar',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) _eliminarCuenta();
+  }
+
+  Future<void> _eliminarCuenta() async {
+    setState(() => _cargando = true);
+    try {
+      await AuthService.eliminarCuenta();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cuenta eliminada correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _cargando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -174,57 +227,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     fn.requestFocus();
   }
 
-  // Método seguro compatible tanto con Flutter Web como con Móvil
-  Widget _buildAvatarContent() {
-    if (_fotoNueva != null) {
-      if (kIsWeb) {
-        return Image.network(
-          _fotoNueva!.path,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _defaultAvatarIcon(),
-        );
-      } else {
-        return Image.file(
-          File(_fotoNueva!.path),
-          fit: BoxFit.cover,
-        );
-      }
-    }
-
-    if (_fotoGuardada != null && _fotoGuardada!.isNotEmpty) {
-      if (_fotoGuardada!.startsWith('http://') || _fotoGuardada!.startsWith('https://')) {
-        return Image.network(
-          _fotoGuardada!,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _defaultAvatarIcon(),
-        );
-      }
-
-      try {
-        String base64Clean = _fotoGuardada!;
-        if (base64Clean.contains(',')) {
-          base64Clean = base64Clean.split(',').last;
-        }
-        return Image.memory(
-          base64Decode(base64Clean),
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _defaultAvatarIcon(),
-        );
-      } catch (_) {
-        return _defaultAvatarIcon();
-      }
-    }
-
-    return _defaultAvatarIcon();
-  }
-
-  Widget _defaultAvatarIcon() {
-    return Container(
-      color: const Color(0xFF084B75),
-      child: const Icon(Icons.person, size: 70, color: Colors.white70),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,57 +237,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF00A8FF)),
-            )
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
           : SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
                   const SizedBox(height: 10),
-                  Center(
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 130,
-                          height: 130,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF00A8FF), width: 3),
-                          ),
-                          child: ClipOval(child: _buildAvatarContent()),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: () async {
-                              final img = await _picker.pickImage(
-                                source: img_picker.ImageSource.gallery,
-                                maxWidth: 400,
-                                maxHeight: 400,
-                                imageQuality: 35,
-                              );
-                              if (img != null) {
-                                setState(() {
-                                  _fotoNueva = img;
-                                  _editando = true;
-                                });
-                              }
-                            },
-                            child: Container(
-                              height: 38,
-                              width: 38,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(0xFF00A8FF),
-                              ),
-                              child: const Icon(Icons.add, color: Colors.white, size: 24),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  ProfileAvatar(
+                    fotoNueva: _fotoNueva,
+                    fotoGuardada: _fotoGuardada,
+                    onTap: () async {
+                      final img = await _picker.pickImage(
+                        source: img_picker.ImageSource.gallery,
+                        maxWidth: 400,
+                        maxHeight: 400,
+                        imageQuality: 35,
+                      );
+                      if (img != null) {
+                        setState(() {
+                          _fotoNueva = img;
+                          _editando = true;
+                        });
+                      }
+                    },
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -303,10 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF084B75),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF00A8FF),
-                        width: 2,
-                      ),
+                      border: Border.all(color: const Color(0xFF00A8FF), width: 2),
                     ),
                     child: Column(
                       children: [
@@ -354,9 +325,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: const Color(0xFF0A74C0),
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text(
-                          'Cerrar sesión',
-                          style: TextStyle(fontSize: 12),
+                        child: const Text('Cerrar sesión', style: TextStyle(fontSize: 12)),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _confirmarEliminarCuenta,
+                        icon: const Icon(Icons.delete_outline,
+                            size: 16, color: Colors.redAccent),
+                        label: const Text(
+                          'Eliminar cuenta',
+                          style: TextStyle(fontSize: 12, color: Colors.redAccent),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.redAccent),
                         ),
                       ),
                     ],

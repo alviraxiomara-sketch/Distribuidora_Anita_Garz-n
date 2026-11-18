@@ -182,6 +182,35 @@ class AuthService {
     await googleSignIn.signOut();
   }
 
+    // ==========================
+  // ELIMINAR CUENTA
+  // ==========================
+  static Future<void> eliminarCuenta() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final response = await http.delete(
+      Uri.parse('${ApiConfig.baseUrl}/usuarios/me'),
+      headers: {
+        ...ApiConfig.headers,
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      await logout(); // limpia la sesión local y cierra Google
+    } else {
+      if (response.body.trim().startsWith('<!DOCTYPE') ||
+          response.body.trim().startsWith('<html')) {
+        throw Exception('Error del servidor (ruta no encontrada)');
+      }
+      final data = jsonDecode(response.body);
+      throw Exception(
+        data['error'] ?? data['mensaje'] ?? 'Error al eliminar la cuenta',
+      );
+    }
+  }
+
   // ==========================
   // GOOGLE SIGN-IN SIMPLIFICADO
   // ==========================
