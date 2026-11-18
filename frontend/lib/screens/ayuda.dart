@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:frontend/widgets/admin_drawer.dart'; // ajusta la ruta donde tengas AdminDrawer
+// import 'package:frontend/screens/perfil.dart';     // tu pantalla de perfil
 
 class AyudaScreen extends StatelessWidget {
   const AyudaScreen({super.key});
@@ -7,48 +10,40 @@ class AyudaScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF031A2E),
+      drawer: const AdminDrawer(), // menú lateral
       appBar: AppBar(
         backgroundColor: const Color(0xFF063B5D),
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Ayuda', style: TextStyle(color: Colors.white)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _item(Icons.inventory_2_outlined, '¿Cómo agrego un producto?',
-              'Menú > Agregar Producto, llena los datos y guarda.'),
-          _item(Icons.filter_list, '¿Cómo filtro por categoría?',
-              'En Inventario, toca Cervezas, Licores, Gaseosas, etc. Tócala otra vez para quitar el filtro.'),
-          _item(Icons.warning_amber_rounded, '¿Qué es stock bajo?',
-              'Productos cuya cantidad es menor al mínimo configurado.'),
-          _item(Icons.notifications_none_rounded, '¿Para qué sirven las notificaciones?',
-              'Avisan de pedidos nuevos y alertas de stock.'),
-          _item(Icons.bar_chart_rounded, '¿Dónde veo mis ventas?',
-              'Menú > Ventas: reportes diarios y mensuales.'),
+        actions: [
+          // Casita: vuelve a la pantalla principal
+          IconButton(
+            icon: const Icon(Icons.home_rounded),
+            tooltip: 'Inicio',
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+          ),
+          // Perfil
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'Perfil',
+            onPressed: () {
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(builder: (_) => const PerfilScreen()),
+              // );
+            },
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _item(IconData icon, String titulo, String texto) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF063B5D),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF00A8FF).withOpacity(0.6)),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF00A8FF)),
-        title: Text(
-          titulo,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        subtitle: Text(
-          texto,
-          style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 12),
-        ),
+          body: SfPdfViewer.asset(
+        'assets/pdf/manual_usuario.pdf',
+        onDocumentLoadFailed: (details) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo abrir el PDF: ${details.description}')),
+          );
+        },
       ),
     );
   }
