@@ -16,7 +16,7 @@ import recuperarRoutes from "./routers/recuperar-router.js";
 import chatboxRouter from "./routers/chatbox-router.js";
 import tipoRouter from "./routers/tipo-router.js";
 import ventasRoutes from "./routers/ventas-router.js"; // <--- Importamos la nueva ruta de tipos
-
+import configuracionRoutes from "./routers/configuracion-router.js";
 // cargamos las variables
 
 conectaDB();
@@ -43,6 +43,7 @@ app.use("/api/recuperar", recuperarRoutes);
 app.use("/api/chatbox", chatboxRouter);
 app.use("/api/tipos", tipoRouter);
 app.use("/api/ventas", ventasRoutes);
+app.use('/api/configuracion', require('./routers/configuracion-router'));
 
 
 //montando la ruta de Api

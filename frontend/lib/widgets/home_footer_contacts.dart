@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/services/config_service.dart';
 
 class HomeFooterContacts extends StatefulWidget {
@@ -31,13 +32,20 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
     }
   }
 
+  /// Lee el token del administrador guardado al iniciar sesión.
+  /// IMPORTANTE: cambia 'token' por la clave que uses en tu login.
+  Future<String> _obtenerToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
+  }
+
   void _mostrarDialogoEditar() {
     final telController = TextEditingController(text: _telefono);
     final dirController = TextEditingController(text: _direccion);
 
     showDialog(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
+      builder: (BuildContext dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF063B5D),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
@@ -45,7 +53,8 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
         ),
         title: Row(
           children: [
-            const Icon(Icons.edit_note_rounded, color: Color(0xFF00A8FF), size: 24),
+            const Icon(Icons.edit_note_rounded,
+                color: Color(0xFF00A8FF), size: 24),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
@@ -67,7 +76,8 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
             children: [
               const Text(
                 'Actualiza la información de atención al cliente visible en toda la aplicación.',
-                style: TextStyle(color: Color(0xFFB0BEC5), fontSize: 12.5, height: 1.3),
+                style: TextStyle(
+                    color: Color(0xFFB0BEC5), fontSize: 12.5, height: 1.3),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -81,20 +91,23 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
               const SizedBox(height: 6),
               TextField(
                 controller: telController,
-                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                    color: Colors.black87, fontWeight: FontWeight.w500),
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
                   hintText: 'Ingrese el teléfono',
-                  prefixIcon: const Icon(Icons.phone, color: Color(0xFF063B5D), size: 20),
+                  prefixIcon: const Icon(Icons.phone,
+                      color: Color(0xFF063B5D), size: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF00A8FF), width: 2),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF00A8FF), width: 2),
                   ),
                 ),
               ),
@@ -110,19 +123,22 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
               const SizedBox(height: 6),
               TextField(
                 controller: dirController,
-                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                    color: Colors.black87, fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
                   hintText: 'Ingrese la dirección',
-                  prefixIcon: const Icon(Icons.location_on, color: Colors.redAccent, size: 20),
+                  prefixIcon: const Icon(Icons.location_on,
+                      color: Colors.redAccent, size: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF00A8FF), width: 2),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF00A8FF), width: 2),
                   ),
                 ),
               ),
@@ -131,28 +147,55 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text(
+              'Cancelar',
+              style:
+                  TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00A8FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () async {
-              await ConfigService.guardarContacto(telController.text.trim(), dirController.text.trim());
-              await _cargarDatos();
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('¡Datos de contacto actualizados con éxito!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              // Se capturan antes del await para no usar un context inválido
+              final navigator = Navigator.of(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
+
+              try {
+                final token = await _obtenerToken();
+
+                await ConfigService.guardarContacto(
+                  telController.text.trim(),
+                  dirController.text.trim(),
+                  token,
+                );
+                await _cargarDatos();
+
+                navigator.pop();
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Datos de contacto actualizados con éxito!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Error al guardar: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
-            child: const Text('Guardar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Guardar',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -187,7 +230,8 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.headset_mic_rounded, color: Color(0xFF00A8FF), size: 18),
+                  const Icon(Icons.headset_mic_rounded,
+                      color: Color(0xFF00A8FF), size: 18),
                   const SizedBox(width: 8),
                   const Text(
                     'Servicios de Atención',
@@ -203,7 +247,8 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
               if (widget.isAdmin)
                 IconButton(
                   onPressed: _mostrarDialogoEditar,
-                  icon: const Icon(Icons.edit, color: Color(0xFF00A8FF), size: 20),
+                  icon: const Icon(Icons.edit,
+                      color: Color(0xFF00A8FF), size: 20),
                   tooltip: 'Editar información',
                 ),
             ],
@@ -217,13 +262,17 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
                   color: const Color(0xFF031A2E),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.phone, color: Color(0xFF00A8FF), size: 16),
+                child:
+                    const Icon(Icons.phone, color: Color(0xFF00A8FF), size: 16),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   _telefono,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -237,13 +286,17 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
                   color: const Color(0xFF031A2E),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.location_on, color: Colors.redAccent, size: 16),
+                child: const Icon(Icons.location_on,
+                    color: Colors.redAccent, size: 16),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   _direccion,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
