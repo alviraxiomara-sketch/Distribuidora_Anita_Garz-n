@@ -3,9 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfigService {
-  // AJUSTA: usa la misma URL base que tienes en api_config.dart
-  // Debe terminar en /api  (ejemplo: https://tu-backend.com/api)
-  static const String _baseUrl = 'https://TU-BACKEND.com/api';
+  // URL base del backend en Render. Debe terminar en /api
+  static const String _baseUrl = 'https://distribuidora-anita.onrender.com/api';
 
   static const String _keyTelefono = 'contacto_telefono';
   static const String _keyDireccion = 'contacto_direccion';
@@ -21,9 +20,11 @@ class ConfigService {
 
     final prefs = await SharedPreferences.getInstance();
     try {
+      // El plan gratuito de Render se "duerme": la primera petición puede
+      // tardar, por eso el tiempo de espera es de 30 segundos.
       final r = await http
           .get(Uri.parse('$_baseUrl/configuracion'))
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 30));
       if (r.statusCode == 200) {
         final d = jsonDecode(r.body);
         final datos = {
@@ -46,7 +47,8 @@ class ConfigService {
 
   static Future<String> getTelefono() async => (await _cargar())['telefono']!;
 
-  static Future<String> getDireccion() async => (await _cargar())['direccion']!;
+  static Future<String> getDireccion() async =>
+      (await _cargar())['direccion']!;
 
   /// Guarda en el servidor. Solo funciona con token de administrador.
   static Future<void> guardarContacto(
@@ -54,14 +56,16 @@ class ConfigService {
     String direccion,
     String token,
   ) async {
-    final r = await http.put(
-      Uri.parse('$_baseUrl/configuracion'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'telefono': telefono, 'direccion': direccion}),
-    );
+    final r = await http
+        .put(
+          Uri.parse('$_baseUrl/configuracion'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'telefono': telefono, 'direccion': direccion}),
+        )
+        .timeout(const Duration(seconds: 30));
 
     if (r.statusCode != 200) {
       throw Exception('No se pudo guardar (${r.statusCode})');
