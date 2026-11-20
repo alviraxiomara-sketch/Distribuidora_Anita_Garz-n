@@ -35,9 +35,13 @@ class _HomeFooterContactsState extends State<HomeFooterContacts> {
   /// Lee el token del administrador guardado al iniciar sesión.
   /// IMPORTANTE: cambia 'token' por la clave que uses en tu login.
   Future<String> _obtenerToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token') ?? '';
+  final prefs = await SharedPreferences.getInstance();
+  for (final clave in ['token', 'jwt', 'access_token', 'authToken']) {
+    final valor = prefs.getString(clave);
+    if (valor != null && valor.isNotEmpty) return valor;
   }
+  return '';
+}
 
   void _mostrarDialogoEditar() {
     final telController = TextEditingController(text: _telefono);
