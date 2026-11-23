@@ -266,6 +266,12 @@ class _PrincipalClienteScreenState extends State<PrincipalClienteScreen> {
                     'Precios Especiales',
                     'Atención directa y las mejores tarifas de distribución.',
                   ),
+                  const SizedBox(height: 14),
+                  _buildBenefitRow(
+                    Icons.delivery_dining_rounded,
+                    'Envíos y Domicilios',
+                    'El costo de los envíos y domicilios lo paga el cliente.',
+                  ),
                 ],
               ),
             ),

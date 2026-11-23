@@ -122,12 +122,12 @@ class _PrincipalAdminScreenState extends State<PrincipalAdminScreen> {
               SizedBox(height: 14),
               AdminBenefitRow(icon: Icons.people_alt_outlined, title: 'Gestión de Clientes', subtitle: 'Revisa registros y perfiles de usuarios activos.'),
               SizedBox(height: 14),
-              // 👇 NUEVO
-              AdminBenefitRow(icon: Icons.delivery_dining_rounded, title: 'Envíos y Domicilios', subtitle: 'El costo de los envíos y domicilios lo paga el cliente.'),
+              AdminBenefitRow(icon: Icons.bar_chart_rounded, title: 'Reportes y Estadísticas', subtitle: 'Analiza datos de ventas y rendimiento del negocio.'),
             ],
           ),
             ),
             const SizedBox(height: 30),
+            
           ],
         ),
       ),
