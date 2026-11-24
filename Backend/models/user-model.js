@@ -109,6 +109,7 @@ export const crearUsuarioGoogle = async ({ nombre, correo, email, googleId, avat
             correo: correoFinal,
             password_hash: null,
             rol,
+            activo: true,
             isVerified: true,
             googleId,
             foto_perfil: avatar // <--- Asignamos correctamente el avatar a la columna real

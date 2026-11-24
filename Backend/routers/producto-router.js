@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { crear, listarProductos, obtener, listarPorCategoria, buscar, actualizar, desactivar, activar } from "../controllers/producto-controller.js";
+import { crear, listarProductos, obtener, listarPorCategoria, buscar, actualizar, desactivar, activar, eliminar } from "../controllers/producto-controller.js";
 import { verificarToken } from "../middlewares/auth-middleware.js";
 import { verificarRol } from "../middlewares/rol-middleware.js";
 import { upload } from "../config/cloudinary.js";
@@ -71,6 +71,14 @@ router.put(
     verificarToken,
     verificarRol("ADMIN"),
     activar
+);
+
+// Eliminar producto (borra también de la base de datos)
+router.delete(
+    "/:id",
+    verificarToken,
+    verificarRol("ADMIN"),
+    eliminar
 );
 
 export default router;

@@ -125,6 +125,12 @@ class _InventarioScreenState extends State<InventarioScreen> {
           temp = decoded['data'] ?? decoded['inventario'] ?? [];
         }
 
+        // Ocultar productos desactivados
+        temp = temp.where((i) {
+          final p = i is Map ? i['productos'] : null;
+          return !(p is Map && p['activo'] == false);
+        }).toList();
+
         setState(() {
           _lista = temp;
           _isLoading = false;
@@ -301,6 +307,112 @@ class _InventarioScreenState extends State<InventarioScreen> {
     }
   }
 
+  // ---------- Eliminar producto ----------
+  Future<void> _confirmarEliminar(dynamic item) async {
+    final p = item['productos'] ?? item;
+    final nombre = (p['nombre'] ?? 'este producto').toString();
+    final idProd = int.tryParse(
+        (item['id_producto'] ?? (p is Map ? p['id_producto'] : null) ?? '').toString());
+    if (idProd == null) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF063B5D),
+        title: const Text('Eliminar producto', style: TextStyle(color: Colors.white)),
+        content: Text(
+          '¿Seguro que quieres eliminar "$nombre"? Esta acción no se puede deshacer.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true) await _eliminarProductoEnBD(idProd);
+  }
+
+  Future<void> _eliminarProductoEnBD(int idProd) async {
+    setState(() => _isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.delete(
+        Uri.parse('${ApiConfig.baseUrl}/productos/$idProd'),
+        headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
+      );
+
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Producto eliminado'), backgroundColor: Colors.green));
+      } else if (res.statusCode == 409) {
+        await _ofrecerDesactivar(idProd);
+      } else {
+        String msg = 'No se pudo eliminar';
+        try {
+          msg = jsonDecode(res.body)['error'] ?? msg;
+        } catch (_) {}
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $msg'), backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error de red: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      await Future.wait([_obtenerInventario(), _obtenerMapaCategorias()]);
+    }
+  }
+
+  // Si el producto ya tiene pedidos/movimientos no se puede borrar: se ofrece desactivarlo
+  Future<void> _ofrecerDesactivar(int idProd) async {
+    final desactivar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF063B5D),
+        title: const Text('No se puede eliminar', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Este producto tiene pedidos o movimientos asociados. ¿Quieres desactivarlo para que deje de aparecer?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Desactivar', style: TextStyle(color: Color(0xFF00A8FF))),
+          ),
+        ],
+      ),
+    );
+    if (desactivar != true) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.put(
+      Uri.parse('${ApiConfig.baseUrl}/productos/$idProd/desactivar'),
+      headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(res.statusCode == 200 ? 'Producto desactivado' : 'No se pudo desactivar'),
+        backgroundColor: res.statusCode == 200 ? Colors.green : Colors.red,
+      ));
+    }
+  }
+
   void _abrirModalEditar(Map<String, dynamic> item) {
     showDialog(
       context: context,
@@ -451,10 +563,33 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _filtrada.length,
-                          itemBuilder: (_, i) => InventarioItemCard(
-                            producto: _filtrada[i],
-                            categoria: _nombreCategoria(_filtrada[i]),
-                            onEditar: () => _abrirModalEditar(_filtrada[i]),
+                          itemBuilder: (_, i) => Stack(
+                            children: [
+                              InventarioItemCard(
+                                producto: _filtrada[i],
+                                categoria: _nombreCategoria(_filtrada[i]),
+                                onEditar: () => _abrirModalEditar(_filtrada[i]),
+                              ),
+                              // Icono de basura debajo del lápiz
+                              Positioned(
+                                top: 52,
+                                right: 11,
+                                child: GestureDetector(
+                                  onTap: () => _confirmarEliminar(_filtrada[i]),
+                                  child: Container(
+                                    width: 37,
+                                    height: 37,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF031A2E),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.redAccent, width: 1.2),
+                                    ),
+                                    child: const Icon(Icons.delete_outline,
+                                        color: Colors.redAccent, size: 20),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
               const SizedBox(height: 10),

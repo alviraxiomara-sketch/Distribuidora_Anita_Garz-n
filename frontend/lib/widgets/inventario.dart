@@ -1,319 +1,448 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart' as img_picker;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/ingresar_producto.dart';
+import 'package:frontend/screens/principal_admin.dart';
+import 'package:frontend/screens/profile.dart';
+import 'package:frontend/services/api_config.dart';
+import 'package:frontend/widgets/admin_drawer.dart';
+import 'package:frontend/widgets/inventario.dart';
+import 'package:frontend/widgets/editar_producto.dart';
 
-/// Un producto se considera AGOTADO cuando su stock es menor o igual a este valor.
-///  - 0 -> agotado solo cuando llega a 0 (requiere que la BD permita stock 0)
-///  - 1 -> agotado cuando queda 1 unidad (útil si la BD no deja llegar a 0)
-///
-/// En Supabase el stock mínimo posible es 1, por eso aquí va 1.
-const int kStockAgotadoHasta = 1;
-
-/// Etiqueta superior "inventario"
-class BadgeInventario extends StatelessWidget {
-  const BadgeInventario({super.key});
+class InventarioScreen extends StatefulWidget {
+  const InventarioScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF084B75),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF00A8FF), width: 1.5),
-      ),
-      child: const Text(
-        'inventario',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
+  State<InventarioScreen> createState() => _InventarioScreenState();
 }
 
-/// Resumen rápido: total de productos, con stock bajo y agotados
-class InventarioResumen extends StatelessWidget {
-  final int total;
-  final int bajos;
-  final int agotados;
+class _InventarioScreenState extends State<InventarioScreen> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _searchController = TextEditingController();
 
-  const InventarioResumen({
-    super.key,
-    required this.total,
-    required this.bajos,
-    required this.agotados,
-  });
+  List<dynamic> _lista = [];
+  List<dynamic> _filtrada = [];
+  List<dynamic> _categoriasList = [];
+  Map<int, int> _catPorProducto = {}; // id_producto -> id_categoria
+  Map<String, int> _catPorClave = {}; // nombre|presentacion|precio -> id_categoria
+  bool _isLoading = true;
+  int? _categoriaSel;
+  bool _soloBajo = false;
+  bool _soloAgotados = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _caja('Productos', total, const Color(0xFF00A8FF),
-              Icons.inventory_2_outlined),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _caja('Stock bajo', bajos, const Color(0xFFFFA726),
-              Icons.warning_amber_rounded),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _caja('Agotados', agotados, Colors.redAccent,
-              Icons.remove_shopping_cart_outlined),
-        ),
-      ],
-    );
+  void initState() {
+    super.initState();
+    _cargarDatosIniciales();
+    _searchController.addListener(_filtrarInventario);
   }
 
-  Widget _caja(String titulo, int valor, Color color, IconData icono) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF063B5D),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.7), width: 1.2),
-      ),
-      child: Column(
-        children: [
-          Icon(icono, color: color, size: 18),
-          const SizedBox(height: 4),
-          Text(
-            '$valor',
-            style: TextStyle(
-              color: color,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarDatosIniciales() async {
+    setState(() => _isLoading = true);
+    await Future.wait([
+      _obtenerInventario(),
+      _obtenerCategorias(),
+      _obtenerMapaCategorias(),
+    ]);
+  }
+
+  Future<void> _obtenerCategorias() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/categorias'),
+        headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200 && mounted) {
+        setState(() => _categoriasList = jsonDecode(res.body));
+      }
+    } catch (_) {}
+  }
+
+  // Consulta /productos para saber la categoría de cada producto
+  Future<void> _obtenerMapaCategorias() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/productos'),
+        headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final List lista = decoded is List
+            ? decoded
+            : (decoded['data'] ?? decoded['productos'] ?? []);
+        final porId = <int, int>{};
+        final porClave = <String, int>{};
+        for (final p in lista) {
+          final idC = _extraerCategoria(p);
+          if (idC == null) continue;
+          final idP = int.tryParse((p['id_producto'] ?? p['id'] ?? '').toString());
+          if (idP != null) porId[idP] = idC;
+          porClave[_claveProducto(p)] = idC;
+        }
+        debugPrint('INVENTARIO: /productos=${lista.length}, con categoría=${porId.length}');
+        if (mounted) {
+          setState(() {
+            _catPorProducto = porId;
+            _catPorClave = porClave;
+          });
+        }
+        _filtrarInventario();
+      }
+    } catch (e) {
+      debugPrint('INVENTARIO: error cargando /productos: $e');
+    }
+  }
+
+  Future<void> _obtenerInventario() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/inventario'),
+        headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
+      );
+
+            if (res.statusCode == 200 && mounted) {
+        debugPrint('INVENTARIO RAW: ${res.body}');
+        final decoded = jsonDecode(res.body);
+        List<dynamic> temp = [];
+        if (decoded is List) {
+          temp = decoded;
+        } else if (decoded is Map) {
+          temp = decoded['data'] ?? decoded['inventario'] ?? [];
+        }
+
+        // Ocultar productos desactivados
+        temp = temp.where((i) {
+          final p = i is Map ? i['productos'] : null;
+          return !(p is Map && p['activo'] == false);
+        }).toList();
+
+        setState(() {
+          _lista = temp;
+          _isLoading = false;
+        });
+        _filtrarInventario();
+        return;
+      }
+    } catch (_) {}
+    _cargarDatosPrueba();
+  }
+
+  void _cargarDatosPrueba() {
+    if (!mounted) return;
+    setState(() {
+      _lista = [
+        {
+          'id_inventario': 1,
+          'id_producto': 101,
+          'stock_actual': 30,
+          'stock_minimo': 20,
+          'productos': {
+            'id_categoria': 1,
+            'nombre': 'Aguila',
+            'precio_detal': '3500',
+            'presentacion': 'Botella'
+          }
+        }
+      ];
+      _filtrada = List.from(_lista);
+      _isLoading = false;
+    });
+  }
+
+  // ---------- Helpers de datos ----------
+  int _aInt(dynamic v) => (num.tryParse(v?.toString() ?? '') ?? 0).round();
+  int _stockActual(dynamic item) => _aInt(item['stock_actual'] ?? item['cantidad']);
+  int _stockMinimo(dynamic item) => _aInt(item['stock_minimo'] ?? 20);
+  bool _esStockBajo(dynamic item) => _stockActual(item) < _stockMinimo(item);
+  bool _esAgotado(dynamic item) => _stockActual(item) <= kStockAgotadoHasta;
+
+  // Saca el id de categoría de un producto, sin importar cómo venga el dato
+  int? _extraerCategoria(dynamic p) {
+    if (p is! Map) return null;
+    dynamic v = p['id_categoria'] ?? p['categoria_id'];
+    if (v == null) {
+      final c = p['categorias'] ?? p['categoria'];
+      v = c is Map ? (c['id_categoria'] ?? c['id']) : c;
+    }
+    return int.tryParse((v ?? '').toString());
+  }
+
+  // Clave para identificar un producto cuando no viene su id
+  String _claveProducto(dynamic p) {
+    final n = (p['nombre'] ?? '').toString().trim().toLowerCase();
+    final pr = (p['presentacion'] ?? '').toString().trim().toLowerCase();
+    final pc = _aInt(p['precio_detal'] ?? p['precio']);
+    return '$n|$pr|$pc';
+  }
+
+  int? _idCategoria(dynamic item) {
+    final p = item['productos'] ?? item;
+    final directo = _extraerCategoria(p) ?? _extraerCategoria(item);
+    if (directo != null) return directo;
+
+    final idProd = int.tryParse(
+        (item['id_producto'] ?? (p is Map ? (p['id_producto'] ?? p['id']) : null) ?? '')
+            .toString());
+    if (idProd != null && _catPorProducto.containsKey(idProd)) {
+      return _catPorProducto[idProd];
+    }
+    return _catPorClave[_claveProducto(p)];
+  }
+
+  String? _nombreCategoria(dynamic item) {
+    final p = item['productos'] ?? item;
+    final embebida = p['categorias'] ?? p['categoria'];
+    if (embebida is Map && embebida['nombre'] != null) {
+      return embebida['nombre'].toString();
+    }
+    final id = _idCategoria(item);
+    if (id == null) return null;
+    for (final c in _categoriasList) {
+      final cid = int.tryParse((c['id_categoria'] ?? c['id'] ?? '').toString());
+      if (cid == id) return (c['nombre'] ?? c['nombre_categoria'])?.toString();
+    }
+    return null;
+  }
+
+  // Busca por nombre + filtros de categoría / stock bajo, y ordena A-Z
+  void _filtrarInventario() {
+    final query = _searchController.text.toLowerCase();
+
+    final resultado = _lista.where((item) {
+      if (item == null) return false;
+      final p = item['productos'] ?? item;
+      final nombre = (p['nombre'] ?? item['nombre'] ?? '').toString().toLowerCase();
+      if (!nombre.contains(query)) return false;
+      if (_categoriaSel != null && _idCategoria(item) != _categoriaSel) return false;
+      // "Stock bajo" no incluye los agotados (igual que el resumen de arriba)
+      if (_soloBajo && !(!_esAgotado(item) && _esStockBajo(item))) return false;
+      if (_soloAgotados && !_esAgotado(item)) return false;
+      return true;
+    }).toList();
+
+    resultado.sort((a, b) {
+      final pa = a['productos'] ?? a;
+      final pb = b['productos'] ?? b;
+      final porNombre = (pa['nombre'] ?? '').toString().toLowerCase()
+          .compareTo((pb['nombre'] ?? '').toString().toLowerCase());
+      if (porNombre != 0) return porNombre;
+      return _aInt(pa['precio_detal']).compareTo(_aInt(pb['precio_detal']));
+    });
+
+    if (_categoriaSel != null) {
+      final sinCat = _lista.where((i) => _idCategoria(i) == null).length;
+      debugPrint('FILTRO categoría=$_categoriaSel -> ${resultado.length} de ${_lista.length} (sin categoría: $sinCat)');
+    }
+
+    if (mounted) setState(() => _filtrada = resultado);
+  }
+
+  Future<void> _actualizarProductoEnBD({
+    required int? idProd,
+    required int? idCat,
+    required String nombre,
+    required String precio,
+    required String presentacion,
+    required int stock,
+    img_picker.XFile? imagen,
+  }) async {
+    if (idProd == null) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      var request = http.MultipartRequest('PUT', Uri.parse('${ApiConfig.baseUrl}/productos/$idProd'));
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+
+      request.fields['nombre'] = nombre;
+      request.fields['precio_detal'] = precio;
+      request.fields['presentacion'] = presentacion;
+      if (idCat != null) request.fields['id_categoria'] = idCat.toString();
+      request.fields['stock_actual'] = stock.toString();
+
+      if (imagen != null) {
+        if (kIsWeb) {
+          final bytes = await imagen.readAsBytes();
+          request.files.add(http.MultipartFile.fromBytes('imagen', bytes, filename: imagen.name));
+        } else {
+          request.files.add(await http.MultipartFile.fromPath('imagen', imagen.path));
+        }
+      }
+
+      final response = await http.Response.fromStream(await request.send());
+
+      if (response.statusCode == 200 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('¡Actualizado correctamente!'), backgroundColor: Colors.green));
+      } else if (mounted) {
+        final err = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${err['error'] ?? 'No se pudo actualizar'}'),
+            backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error de red: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      await Future.wait([_obtenerInventario(), _obtenerMapaCategorias()]);
+    }
+  }
+
+  // ---------- Eliminar producto ----------
+  Future<void> _confirmarEliminar(dynamic item) async {
+    final p = item['productos'] ?? item;
+    final nombre = (p['nombre'] ?? 'este producto').toString();
+    final idProd = int.tryParse(
+        (item['id_producto'] ?? (p is Map ? p['id_producto'] : null) ?? '').toString());
+    if (idProd == null) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF063B5D),
+        title: const Text('Eliminar producto', style: TextStyle(color: Colors.white)),
+        content: Text(
+          '¿Seguro que quieres eliminar "$nombre"? Esta acción no se puede deshacer.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
           ),
-          Text(
-            titulo,
-            style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 10),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
+
+    if (ok == true) await _eliminarProductoEnBD(idProd);
   }
-}
 
-/// Tarjeta de producto del inventario
-class InventarioItemCard extends StatelessWidget {
-  final Map<String, dynamic> producto;
-  final String? categoria;
-  final VoidCallback? onEditar;
+  Future<void> _eliminarProductoEnBD(int idProd) async {
+    setState(() => _isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final res = await http.delete(
+        Uri.parse('${ApiConfig.baseUrl}/productos/$idProd'),
+        headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
+      );
 
-  const InventarioItemCard({
-    super.key,
-    required this.producto,
-    this.categoria,
-    this.onEditar,
-  });
-
-  int _aInt(dynamic v) => (num.tryParse(v?.toString() ?? '') ?? 0).round();
-
-  String _buscarTapa(dynamic p, Map<String, dynamic> item) {
-    for (final fuente in [p, item]) {
-      if (fuente is! Map) continue;
-      for (final e in fuente.entries) {
-        if (e.key.toString().toLowerCase().contains('tapa') &&
-            e.value != null &&
-            e.value is! Map &&
-            e.value is! List) {
-          final t = e.value.toString().trim();
-          if (t.isNotEmpty && t.toLowerCase() != 'null') return t;
-        }
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Producto eliminado'), backgroundColor: Colors.green));
+      } else if (res.statusCode == 409) {
+        await _ofrecerDesactivar(idProd);
+      } else {
+        String msg = 'No se pudo eliminar';
+        try {
+          msg = jsonDecode(res.body)['error'] ?? msg;
+        } catch (_) {}
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $msg'), backgroundColor: Colors.red));
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error de red: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      await Future.wait([_obtenerInventario(), _obtenerMapaCategorias()]);
     }
-    return '';
   }
 
-  String _formatoPrecio(dynamic v) {
-    final n = num.tryParse(v?.toString() ?? '');
-    if (n == null) return '\$${v ?? 0}';
-    final s = n.round().toString();
-    final b = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) b.write('.');
-      b.write(s[i]);
+  // Si el producto ya tiene pedidos/movimientos no se puede borrar: se ofrece desactivarlo
+  Future<void> _ofrecerDesactivar(int idProd) async {
+    final desactivar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF063B5D),
+        title: const Text('No se puede eliminar', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Este producto tiene pedidos o movimientos asociados. ¿Quieres desactivarlo para que deje de aparecer?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Desactivar', style: TextStyle(color: Color(0xFF00A8FF))),
+          ),
+        ],
+      ),
+    );
+    if (desactivar != true) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.put(
+      Uri.parse('${ApiConfig.baseUrl}/productos/$idProd/desactivar'),
+      headers: {...ApiConfig.headers, if (token != null) 'Authorization': 'Bearer $token'},
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(res.statusCode == 200 ? 'Producto desactivado' : 'No se pudo desactivar'),
+        backgroundColor: res.statusCode == 200 ? Colors.green : Colors.red,
+      ));
     }
-    return '\$${b.toString()}';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final p = producto['productos'] ?? producto;
-    final nombre = (p['nombre'] ?? producto['nombre'] ?? 'Producto').toString();
-    final precio = p['precio_detal'] ?? p['precio'] ?? 0;
-    final presentacion = (p['presentacion'] ?? 'Unidad').toString();
-    final imagenUrl = p['imagen_url'] ?? producto['imagen_url'];
+  void _abrirModalEditar(Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (_) => EditarProductoDialog(
+        item: item,
+        categoriasList: _categoriasList,
+        onGuardar: _actualizarProductoEnBD,
+      ),
+    );
+  }
 
-    // Tapa tal cual viene de la base de datos (campo "tapa")
-    // Busca cualquier campo cuyo nombre contenga "tapa" (tapa, tipo_tapa, etc.)
-    final tapa = _buscarTapa(p, producto);
-
-    final stockActual = _aInt(producto['stock_actual'] ?? producto['cantidad']);
-    final stockMinimo = _aInt(producto['stock_minimo'] ?? 20);
-
-    late final Color color;
-    late final String estado;
-    if (stockActual <= kStockAgotadoHasta) {
-      color = Colors.red;
-      estado = 'Agotado';
-    } else if (stockActual < stockMinimo) {
-      color = const Color(0xFFE67E22);
-      estado = 'Stock bajo';
-    } else {
-      color = const Color(0xFF2E9E4F);
-      estado = 'Disponible';
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+  Widget _chipFiltro(String label, bool activo, VoidCallback onTap,
+      {Color color = const Color(0xFF00A8FF)}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
         child: Container(
-          color: const Color(0xFFD9D9D9),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Franja de color según el estado del stock
-                Container(width: 6, color: color),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildImagenMiniatura(imagenUrl),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    nombre,
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 4,
-                                    children: [
-                                      _chip(presentacion,
-                                          const Color(0xFF063B5D), Colors.white),
-                                      if (categoria != null &&
-                                          categoria!.isNotEmpty)
-                                        _chip(categoria!, Colors.white,
-                                            const Color(0xFF063B5D)),
-                                      if (tapa.isNotEmpty)
-                                        _chip(tapa, const Color(0xFFB3E5FC),
-                                            const Color(0xFF063B5D)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.baseline,
-                                    textBaseline: TextBaseline.alphabetic,
-                                    children: [
-                                      Text(
-                                        _formatoPrecio(precio),
-                                        style: const TextStyle(
-                                          color: Color(0xFF063B5D),
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Text(
-                                        'precio detal',
-                                        style: TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 10),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            InkWell(
-                              onTap: onEditar,
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF063B5D),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.edit_outlined,
-                                    color: Colors.white, size: 18),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Divider(height: 1, color: Colors.black26),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              '$stockActual',
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'UD en stock',
-                              style: TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            const Spacer(),
-                            Text(
-                              'Mín: $stockMinimo',
-                              style: const TextStyle(
-                                  color: Colors.black54, fontSize: 11),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: color,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                estado,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: activo ? color : const Color(0xFF084B75),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color, width: 1.2),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: activo ? FontWeight.bold : FontWeight.w500,
             ),
           ),
         ),
@@ -321,53 +450,142 @@ class InventarioItemCard extends StatelessWidget {
     );
   }
 
-  Widget _chip(String texto, Color fondo, Color textoColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: fondo,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF063B5D), width: 0.8),
-      ),
-      child: Text(
-        texto,
-        style: TextStyle(
-          color: textoColor,
-          fontSize: 10.5,
-          fontWeight: FontWeight.w600,
-        ),
+  Widget _buildFiltros() {
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _chipFiltro('Todos', _categoriaSel == null && !_soloBajo && !_soloAgotados, () {
+            _categoriaSel = null;
+            _soloBajo = false;
+            _soloAgotados = false;
+            _filtrarInventario();
+          }),
+          _chipFiltro('Stock bajo', _soloBajo, () {
+            _soloBajo = !_soloBajo;
+            _soloAgotados = false;
+            _filtrarInventario();
+          }, color: const Color(0xFFFFA726)),
+          _chipFiltro('Agotados', _soloAgotados, () {
+            _soloAgotados = !_soloAgotados;
+            _soloBajo = false;
+            _filtrarInventario();
+          }, color: Colors.redAccent),
+          for (final c in _categoriasList)
+            () {
+              final id = int.tryParse((c['id_categoria'] ?? c['id'] ?? '').toString());
+              final nombre = (c['nombre'] ?? c['nombre_categoria'] ?? '').toString();
+              return _chipFiltro(nombre, _categoriaSel == id, () {
+                _categoriaSel = _categoriaSel == id ? null : id;
+                _filtrarInventario();
+              });
+            }(),
+        ],
       ),
     );
   }
 
-  Widget _buildImagenMiniatura(String? url) {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade400),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: const Color(0xFF031A2E),
+      drawer: const AdminDrawer(),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF063B5D),
+        elevation: 0,
+        leadingWidth: 112,
+        leading: Row(children: [
+          const SizedBox(width: 6),
+          IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed: () => _scaffoldKey.currentState?.openDrawer()),
+          IconButton(
+              icon: const Icon(Icons.home_outlined, color: Colors.white),
+              onPressed: () => Navigator.pushReplacement(
+                  context, MaterialPageRoute(builder: (_) => const PrincipalAdminScreen()))),
+        ]),
+        title: Container(
+          height: 38,
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.black, fontSize: 13),
+            decoration: const InputDecoration(
+              hintText: 'Buscar Producto',
+              prefixIcon: Icon(Icons.search, color: Colors.grey, size: 18),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(vertical: 8),
+            ),
+          ),
+        ),
+        actions: [
+          IconButton(
+              icon: const Icon(Icons.account_circle_outlined, color: Colors.white),
+              onPressed: () =>
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()))),
+          const SizedBox(width: 4),
+        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: (url != null && url.isNotEmpty && url.startsWith('http'))
-            ? Image.network(
-                url,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                    Icons.local_drink_rounded,
-                    color: Color(0xFF031A2E),
-                    size: 28),
-              )
-            : Image.asset(
-                'assets/images/logo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                    Icons.local_drink_rounded,
-                    color: Color(0xFF031A2E),
-                    size: 28),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF384E5E).withOpacity(0.5),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF00A8FF), width: 2),
+          ),
+          child: Column(
+            children: [
+              const BadgeInventario(),
+              const SizedBox(height: 14),
+              InventarioResumen(
+                total: _lista.length,
+                bajos: _lista.where((i) => !_esAgotado(i) && _esStockBajo(i)).length,
+                agotados: _lista.where((i) => _esAgotado(i)).length,
               ),
+              const SizedBox(height: 14),
+              _buildFiltros(),
+              const SizedBox(height: 16),
+              _isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator(color: Color(0xFF00A8FF)))
+                  : _filtrada.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(40),
+                          child: Text('No se encontraron productos',
+                              style: TextStyle(color: Colors.white70)))
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _filtrada.length,
+                          itemBuilder: (_, i) => InventarioItemCard(
+                            producto: _filtrada[i],
+                            categoria: _nombreCategoria(_filtrada[i]),
+                            onEditar: () => _abrirModalEditar(_filtrada[i]),
+                            onEliminar: () => _confirmarEliminar(_filtrada[i]),
+                          ),
+                        ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                      context, MaterialPageRoute(builder: (_) => const IngresarProductoScreen())),
+                  child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                      child: const Icon(Icons.add, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

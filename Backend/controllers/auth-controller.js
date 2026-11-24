@@ -95,9 +95,16 @@ export const login = async (req, res) => {
             });
         }
 
-        if (!usuario.activo) {
+        if (usuario.activo === false) {
             return res.status(403).json({
                 error: "Usuario inactivo"
+            });
+        }
+
+        // Cuenta creada con Google: todavía no tiene contraseña
+        if (!usuario.password_hash) {
+            return res.status(400).json({
+                error: "Esta cuenta se creó con Google y aún no tiene contraseña. Inicia sesión con Google o toca «¿Olvidaste tu contraseña?» para crear una."
             });
         }
 
@@ -243,6 +250,12 @@ export const cambiarPassword = async (req, res) => {
         }
 
         const { data: usuario } = await obtenerUsuarioCompletoPorId(id_usuario);
+
+        if (!usuario.password_hash) {
+            return res.status(400).json({
+                error: "Tu cuenta no tiene contraseña (entraste con Google). Usa «¿Olvidaste tu contraseña?» en el inicio de sesión para crear una."
+            });
+        }
 
         const passwordValida = await bcrypt.compare(
             passwordActual,

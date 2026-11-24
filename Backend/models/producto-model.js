@@ -213,3 +213,47 @@ export const activarProducto = async (id_producto) => {
  
     return { data, error };
 };
+
+
+// ==========================
+// ELIMINAR PRODUCTO (BORRADO REAL)
+// ==========================
+// Borra primero el inventario del producto y luego el producto.
+// Si el producto tiene pedidos / movimientos asociados, la base de datos
+// lo rechaza (error 23503) y se restaura el inventario para no perder el stock.
+
+export const eliminarProducto = async (id_producto) => {
+
+    const { data: inventario } =
+        await supabase
+            .from("inventario")
+            .select("*")
+            .eq("id_producto", id_producto)
+            .maybeSingle();
+
+    if (inventario) {
+        const { error: errorInv } =
+            await supabase
+                .from("inventario")
+                .delete()
+                .eq("id_producto", id_producto);
+
+        if (errorInv) {
+            return { data: null, error: errorInv };
+        }
+    }
+
+    const { data, error } =
+        await supabase
+            .from("productos")
+            .delete()
+            .eq("id_producto", id_producto)
+            .select();
+
+    if (error && inventario) {
+        // Restaurar el inventario porque el producto no se pudo borrar
+        await supabase.from("inventario").insert(inventario);
+    }
+
+    return { data, error };
+};

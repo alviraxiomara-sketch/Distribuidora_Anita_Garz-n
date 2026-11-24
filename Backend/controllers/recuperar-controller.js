@@ -87,6 +87,7 @@ export const forgotPassword = async (
 
         }
 
+        try {
         await brevo.transactionalEmails.sendTransacEmail({
 
             sender: {
@@ -145,6 +146,12 @@ export const forgotPassword = async (
             `
 
         });
+        } catch (errCorreo) {
+            console.error("[recuperar] Error enviando el código con Brevo:", errCorreo?.body || errCorreo?.message || errCorreo);
+            return res.status(500).json({
+                error: "No se pudo enviar el correo. Intenta de nuevo en unos minutos."
+            });
+        }
 
         return res.status(200).json({
 
@@ -276,6 +283,7 @@ export const resetPassword = async (
             codigoValido.id_codigo
         );
 
+        try {
         await brevo.transactionalEmails.sendTransacEmail({
 
             sender: {
@@ -318,6 +326,10 @@ export const resetPassword = async (
             `
 
         });
+        } catch (errCorreo) {
+            // La contraseña ya se cambió; el aviso por correo es opcional
+            console.error("[recuperar] Error enviando aviso con Brevo:", errCorreo?.body || errCorreo?.message || errCorreo);
+        }
 
         return res.status(200).json({
 

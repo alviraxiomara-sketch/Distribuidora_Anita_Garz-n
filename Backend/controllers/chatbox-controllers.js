@@ -43,7 +43,7 @@ const obtenerCatalogo = async () => {
 
   const { data: productos, error } = await supabase
     .from("productos")
-    .select("nombre, presentacion, precio_detal, activo, categorias ( nombre )")
+    .select("nombre, presentacion, tipo, precio_detal, activo, categorias ( nombre )")
     .eq("activo", true);
 
   if (error) throw new Error(`Supabase productos: ${error.message}`);
@@ -58,7 +58,8 @@ const obtenerCatalogo = async () => {
     .map((p) => {
       const cat = p.categorias?.nombre ? ` [${p.categorias.nombre}]` : "";
       const pres = p.presentacion ? ` (${p.presentacion})` : "";
-      return `- ${p.nombre}${pres}${cat}: $${Number(p.precio_detal).toLocaleString("es-CO")}`;
+      const tipo = p.tipo ? ` {${p.tipo.trim()}}` : "";
+      return `- ${p.nombre}${pres}${cat}${tipo}: $${Number(p.precio_detal).toLocaleString("es-CO")}`;
     })
     .join("\n");
 
@@ -118,15 +119,20 @@ export const chatearConDistribuidoraAnita = async (req, res) => {
 Eres el asesor virtual de la Distribuidora "Distribuidora Anita".
 Eres alegre, amable, refrescante y educado.
 
-CATÁLOGO ACTUAL EN TIENDA (nombre, presentación, [categoría]: precio):
+CATÁLOGO ACTUAL EN TIENDA (nombre, presentación, [categoría], {tipo}: precio):
 ${catalogoTexto}
 
+INFORMACIÓN DEL NEGOCIO:
+- Envíos: SÍ hacemos envíos a todo el Huila.
+- No inventes costos de envío, tiempos de entrega ni pedido mínimo. Si el cliente pregunta por eso, dile que se confirma al hacer el pedido.
+
 ALCANCE:
-- Solo puedes hablar de Distribuidora Anita: productos, precios y categorías según el catálogo de arriba.
+- Solo puedes hablar de Distribuidora Anita: productos, precios, categorías y envíos.
 - No inventes productos ni precios que no estén en el catálogo.
 
 SI ESTÁ PERMITIDO:
 - Preguntas sobre productos, categorías (cervezas, licores, gaseosas, jugos, etc.), precios o presentaciones del catálogo.
+- Preguntas sobre envíos o domicilios. Responde: "Sí, hacemos envíos a todo el Huila 🚚".
 - Mensajes con errores de ortografía: interpreta la intención y responde amablemente.
 
 NO ESTÁ PERMITIDO:
@@ -138,6 +144,7 @@ REGLAS DE ATENCIÓN:
 1. ${reglaSaludo}
 2. Precios siempre en pesos colombianos ($ COP).
 3. Texto plano sin tablas, sin asteriscos ni markdown.
+4. El {tipo} de cada producto es "Nacionales" o "Importadas". Si el cliente pide importadas o nacionales, muestra SOLO los productos de ese tipo (y si pide una categoría junto con el tipo, aplica ambos filtros). Nunca listes todo el catálogo cuando pidió un tipo concreto.
 `;
 
     // 5. Inferencia con modelos de respaldo

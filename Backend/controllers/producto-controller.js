@@ -1,4 +1,4 @@
-import {crearProducto, obtenerProductos, obtenerProductoPorId, obtenerProductosPorCategoria, buscarProductosPorNombre, actualizarProducto, desactivarProducto, activarProducto} from "../models/producto-model.js";
+import {crearProducto, obtenerProductos, obtenerProductoPorId, obtenerProductosPorCategoria, buscarProductosPorNombre, actualizarProducto, desactivarProducto, activarProducto, eliminarProducto} from "../models/producto-model.js";
 import {crearInventario, actualizarInventarioPorProducto} from "../models/inventario-model.js";
 
 // ==========================
@@ -197,12 +197,14 @@ export const actualizar = async (req, res) => {
             stock_actual,
             tipo
         } = req.body;
-        
+
         const imagen_url = req.file ? req.file.path : null;
 
-        if (!id_categoria || !nombre || precio_detal === undefined || precio_detal === null || !tipo) {
+        // En la edición solo son obligatorios nombre y precio al detal.
+        // "tipo", categoría, etc. son opcionales: si no vienen, se conserva lo que ya hay en la BD.
+        if (!nombre || precio_detal === undefined || precio_detal === null || precio_detal === '') {
             return res.status(400).json({
-                error: "Categoría, nombre, precio al detal y tipo son obligatorios"
+                error: "Nombre y precio al detal son obligatorios"
             });
         }
 
@@ -212,27 +214,26 @@ export const actualizar = async (req, res) => {
             });
         }
 
-        if (precio_mayorista !== undefined && precio_mayorista !== null && Number(precio_mayorista) <= 0) {
+        if (precio_mayorista !== undefined && precio_mayorista !== null && precio_mayorista !== '' && Number(precio_mayorista) <= 0) {
             return res.status(400).json({
                 error: "El precio mayorista debe ser mayor que 0"
             });
         }
 
+        // Solo se actualizan los campos que realmente llegaron
         const datosActualizados = {
-            id_categoria,
             nombre,
-            presentacion: presentacion || null,
-            tapa: tapa || null,
             precio_detal,
-            precio_mayorista: precio_mayorista || null,
-            cantidad_minima_mayorista: cantidad_minima_mayorista || null,
-            tipo,
             updated_at: new Date()
         };
 
-        if (imagen_url) {
-            datosActualizados.imagen_url = imagen_url;
-        }
+        if (id_categoria) datosActualizados.id_categoria = id_categoria;
+        if (tipo) datosActualizados.tipo = tipo;
+        if (presentacion !== undefined) datosActualizados.presentacion = presentacion || null;
+        if (tapa !== undefined) datosActualizados.tapa = tapa || null;
+        if (precio_mayorista !== undefined) datosActualizados.precio_mayorista = precio_mayorista || null;
+        if (cantidad_minima_mayorista !== undefined) datosActualizados.cantidad_minima_mayorista = cantidad_minima_mayorista || null;
+        if (imagen_url) datosActualizados.imagen_url = imagen_url;
 
         const { data, error } = await actualizarProducto(id, datosActualizados);
 
@@ -241,7 +242,11 @@ export const actualizar = async (req, res) => {
         }
 
         if (stock_actual !== undefined && stock_actual !== '') {
-            await actualizarInventarioPorProducto(id, { stock_actual: Number(stock_actual) });
+            const { error: errorStock } = await actualizarInventarioPorProducto(id, { stock_actual: Number(stock_actual) });
+
+            if (errorStock) {
+                return res.status(500).json({ error: "Se guardó el producto pero falló el stock: " + errorStock.message });
+            }
         }
 
         return res.status(200).json({
@@ -293,6 +298,42 @@ export const activar = async (req, res) => {
             mensaje: "Producto activado correctamente",
             producto: data
         });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+// ==========================
+// ELIMINAR PRODUCTO
+// ==========================
+
+export const eliminar = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: existente, error: errorBuscar } = await obtenerProductoPorId(id);
+
+        if (errorBuscar) {
+            return res.status(500).json({ error: errorBuscar.message });
+        }
+        if (!existente) {
+            return res.status(404).json({ error: "Producto no encontrado" });
+        }
+
+        const { error } = await eliminarProducto(id);
+
+        if (error) {
+            // 23503 = el producto tiene pedidos, movimientos o carritos asociados
+            if (error.code === "23503") {
+                return res.status(409).json({
+                    error: "El producto tiene pedidos o movimientos asociados y no se puede eliminar. Puedes desactivarlo."
+                });
+            }
+            return res.status(500).json({ error: error.message });
+        }
+
+        return res.status(200).json({ mensaje: "Producto eliminado correctamente" });
+
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
