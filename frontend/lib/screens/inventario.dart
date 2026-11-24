@@ -563,33 +563,11 @@ class _InventarioScreenState extends State<InventarioScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _filtrada.length,
-                          itemBuilder: (_, i) => Stack(
-                            children: [
-                              InventarioItemCard(
-                                producto: _filtrada[i],
-                                categoria: _nombreCategoria(_filtrada[i]),
-                                onEditar: () => _abrirModalEditar(_filtrada[i]),
-                              ),
-                              // Icono de basura debajo del lápiz
-                              Positioned(
-                                top: 52,
-                                right: 11,
-                                child: GestureDetector(
-                                  onTap: () => _confirmarEliminar(_filtrada[i]),
-                                  child: Container(
-                                    width: 37,
-                                    height: 37,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF031A2E),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.redAccent, width: 1.2),
-                                    ),
-                                    child: const Icon(Icons.delete_outline,
-                                        color: Colors.redAccent, size: 20),
-                                  ),
-                                ),
-                              ),
-                            ],
+                          itemBuilder: (_, i) => InventarioItemCard(
+                            producto: _filtrada[i],
+                            categoria: _nombreCategoria(_filtrada[i]),
+                            onEditar: () => _abrirModalEditar(_filtrada[i]),
+                            onEliminar: () => _confirmarEliminar(_filtrada[i]),
                           ),
                         ),
               const SizedBox(height: 10),
