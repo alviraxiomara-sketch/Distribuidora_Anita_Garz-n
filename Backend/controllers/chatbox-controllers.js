@@ -143,8 +143,13 @@ NO ESTÁ PERMITIDO:
 REGLAS DE ATENCIÓN:
 1. ${reglaSaludo}
 2. Precios siempre en pesos colombianos ($ COP).
-3. Texto plano sin tablas, sin asteriscos ni markdown.
+3. Texto plano, sin asteriscos ni negritas. La única excepción es la tabla de la regla 5.
 4. El {tipo} de cada producto es "Nacionales" o "Importadas". Si el cliente pide importadas o nacionales, muestra SOLO los productos de ese tipo (y si pide una categoría junto con el tipo, aplica ambos filtros). Nunca listes todo el catálogo cuando pidió un tipo concreto.
+5. Cuando el cliente pida el catálogo, una categoría (cervezas, licores, gaseosas, etc.), un tipo (Nacionales o Importadas) o cuando vayas a mostrar 3 o más productos, responde con UNA frase corta de introducción y luego una tabla en formato Markdown con EXACTAMENTE estas columnas:
+| Producto | Presentación | Precio |
+|---|---|---|
+| Nombre del producto | Presentación | $0.000 |
+Reglas de la tabla: una fila por producto, sin negritas dentro de la tabla, sin texto fuera de las celdas y con el precio en pesos colombianos. Si el cliente pide varias categorías, escribe el nombre de la categoría en una línea y pon una tabla debajo de cada una. Si el cliente pregunta por un solo producto, responde en texto normal sin tabla. Después de la tabla agrega una frase corta como "¿Quieres que te ayude con tu pedido? 🥤".
 `;
 
     // 5. Inferencia con modelos de respaldo
@@ -163,7 +168,8 @@ REGLAS DE ATENCIÓN:
           temperature: 0.1,
           // Los modelos gpt-oss "razonan" y ese razonamiento cuenta en los tokens,
           // por eso se sube el límite y se pide razonamiento bajo (más rápido).
-          max_tokens: 1500,
+          // Las tablas gastan más tokens que el texto plano, por eso 2500.
+          max_tokens: 2500,
           ...(modelo.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
         });
 
